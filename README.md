@@ -259,7 +259,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-For support, email mukesh@example.com or create an issue in the repository.
+For support, email mksahu857@gmail.com or create an issue in the repository.
 
 ---
 
