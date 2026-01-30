@@ -40,7 +40,7 @@ An intelligent farming assistant that combines AI-powered plant disease detectio
 ```
 krishi_1/
 ├── backend/
-│   ├── app.py                          # Main Flask application (2,398 lines, 26 routes)
+│   ├── app.py                          # Main Flask application 
 │   ├── ml_model.py                     # TensorFlow model wrapper
 │   ├── requirements.txt                # Python dependencies
 │   ├── .env                            # Environment variables (DO NOT COMMIT)
@@ -58,7 +58,7 @@ krishi_1/
 │   │   ├── signup.html                 # Registration page
 │   │   └── weather.html                # Weather dashboard
 │   ├── static/js/
-│   │   ├── main.js                     # Chat & disease detection (1,196 lines)
+│   │   ├── main.js                     # Chat & disease detection 
 │   │   ├── login.js                    # Login functionality
 │   │   ├── signup.js                   # Registration functionality
 │   │   ├── weather.js                  # Weather display
