@@ -16,6 +16,10 @@ import threading
 import time
 import base64
 from io import BytesIO
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import secrets
 
 try:
     import google.generativeai as genai
@@ -32,10 +36,31 @@ except Exception as e:
     document_extractor = None
     print(f"  Document extractor not available: {e}")
 
+# Import farmer services (Mandi, Schemes, Calendar, Soil, Economics, Alerts)
+try:
+    from farmer_services import (
+        mandi_service, scheme_service, crop_calendar_service,
+        soil_service, economics_service, alert_service
+    )
+    print("  Farmer services module loaded successfully")
+except Exception as e:
+    mandi_service = scheme_service = crop_calendar_service = None
+    soil_service = economics_service = alert_service = None
+    print(f"  Farmer services not available: {e}")
+
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__, template_folder='../frontend/templates', static_folder='../frontend/static')
+
+# ========== SMTP Configuration ==========
+SMTP_EMAIL = os.getenv('SMTP_EMAIL', '')       # Your Gmail address
+SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '') # Gmail App Password (NOT your regular password)
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+
+# OTP storage: { email: { 'otp': '123456', 'expiry': datetime, 'verified': False, 'attempts': 0, 'token': 'uuid' } }
+otp_store = {}
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 
 # Enable CORS for frontend-backend communication
@@ -339,7 +364,10 @@ def convert_language_code(language):
         'hindi': 'hi', 'hi': 'hi', 
         'marathi': 'mr', 'mr': 'mr',
         'punjabi': 'pa', 'pa': 'pa',
-        'malayalam': 'ml', 'ml': 'ml'
+        'malayalam': 'ml', 'ml': 'ml',
+        'tamil': 'ta', 'ta': 'ta',
+        'telugu': 'te', 'te': 'te',
+        'kannada': 'kn', 'kn': 'kn'
     }
     return language_mappings.get(language.lower(), 'en')
 
@@ -509,6 +537,55 @@ class FarmingAI:
         has_context = any(keyword in msg for keyword in weather_location_keywords + soil_keywords)
         
         return has_crop and has_context
+    
+    def is_mandi_price_query(self, message: str) -> bool:
+        """Check if user is asking about mandi/market prices or MSP"""
+        msg = (message or "").lower().strip()
+        price_keywords = [
+            'mandi', 'market price', 'rate', 'bhav', 'msp', 'minimum support price',
+            'selling price', 'what price', 'commodity price', 'grain price',
+            'मंडी', 'भाव', 'दाम', 'बाजार', 'कीमत', 'रेट', 'न्यूनतम समर्थन मूल्य',
+            'बाजार भाव', 'बाजारभाव', 'किंमत', 'दर', 'बाजार दर',
+            'ਮੰਡੀ', 'ਭਾਅ', 'ਕੀਮਤ', 'ਰੇਟ',
+        ]
+        return any(keyword in msg for keyword in price_keywords)
+    
+    def is_scheme_query(self, message: str) -> bool:
+        """Check if user is asking about government schemes"""
+        msg = (message or "").lower().strip()
+        scheme_keywords = [
+            'scheme', 'yojana', 'pm-kisan', 'pmkisan', 'pm kisan', 'pmfby',
+            'kcc', 'kisan credit', 'subsidy', 'government scheme', 'sarkari yojana',
+            'loan', 'insurance', 'crop insurance', 'pm-fasal', 'pradhan mantri',
+            'सरकारी योजना', 'योजना', 'सब्सिडी', 'प्रधानमंत्री', 'पीएम किसान', 'बीमा',
+            'किसान क्रेडिट', 'ऋण', 'कर्ज', 'शासकीय योजना', 'शेतकरी योजना',
+            'ਯੋਜਨਾ', 'ਸਬਸਿਡੀ', 'ਸਰਕਾਰੀ',
+        ]
+        return any(keyword in msg for keyword in scheme_keywords)
+    
+    def is_soil_query(self, message: str) -> bool:
+        """Check if user is asking about soil health or fertilizer dosage"""
+        msg = (message or "").lower().strip()
+        soil_keywords = [
+            'soil health', 'soil test', 'npk', 'fertilizer dose', 'fertilizer quantity',
+            'how much urea', 'how much dap', 'fertilizer calculator', 'soil problem',
+            'yellow leaves', 'nutrient deficiency', 'soil analysis', 'soil report',
+            'मिट्टी जांच', 'मिट्टी स्वास्थ्य', 'खाद मात्रा', 'कितना यूरिया', 'कितना डीएपी',
+            'पीले पत्ते', 'माती तपासणी', 'खत मात्रा',
+        ]
+        return any(keyword in msg for keyword in soil_keywords)
+    
+    def is_economics_query(self, message: str) -> bool:
+        """Check if user is asking about farm economics / profit calculation"""
+        msg = (message or "").lower().strip()
+        econ_keywords = [
+            'profit', 'loss', 'cost of cultivation', 'roi', 'return on investment',
+            'how much earn', 'how much profit', 'farming profit', 'crop economics',
+            'breakeven', 'cultivation cost', 'input cost', 'farm budget',
+            'लाभ', 'नुकसान', 'खेती लागत', 'कितना कमा', 'मुनाफा', 'खर्च',
+            'उत्पन्न खर्च', 'नफा', 'तोटा', 'लागत', 'शेती खर्च',
+        ]
+        return any(keyword in msg for keyword in econ_keywords)
     
     def _extract_location(self, message: str) -> str:
         """Extract location from user message, default to common Indian farming regions"""
@@ -736,7 +813,7 @@ class FarmingAI:
         # Fallback if weather API fails - use Gemini
         print(" Weather API unavailable, using Gemini fallback")
         
-        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam'}
+        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam', 'ta': 'Tamil', 'te': 'Telugu', 'kn': 'Kannada'}
         lang_name = language_names.get(language, 'English')
         
         weather_prompt = f"""You are an agricultural advisor. The farmer is asking about weather: "{message}"
@@ -779,7 +856,7 @@ Respond in {lang_name} with practical, actionable advice. Keep it brief and focu
         # Fetch current weather data
         weather_data = self._get_weather_data(location)
         
-        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam'}
+        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam', 'ta': 'Tamil', 'te': 'Telugu', 'kn': 'Kannada'}
         lang_name = language_names.get(language, 'English')
         
         if weather_data:
@@ -998,6 +1075,26 @@ Write ENTIRE response in {lang_name} language ONLY. Be specific and practical.""
             print(f"Update query detected: {message[:50]}...")
             return self._get_update_response(message, language)
         
+        # Check if this is a mandi/price query → enrich with real data
+        if self.is_mandi_price_query(message) and mandi_service:
+            print(f"💰 Mandi price query detected: {message[:50]}...")
+            return self._get_mandi_enriched_response(message, language)
+        
+        # Check if this is a government scheme query → enrich with scheme data
+        if self.is_scheme_query(message) and scheme_service:
+            print(f"🏛️ Scheme query detected: {message[:50]}...")
+            return self._get_scheme_enriched_response(message, language)
+        
+        # Check if this is a soil health query → enrich with soil data
+        if self.is_soil_query(message) and soil_service:
+            print(f"🧪 Soil query detected: {message[:50]}...")
+            return self._get_soil_enriched_response(message, language)
+        
+        # Check if this is a farm economics query → enrich with economics data
+        if self.is_economics_query(message) and economics_service:
+            print(f"📊 Economics query detected: {message[:50]}...")
+            return self._get_economics_enriched_response(message, language)
+        
         print(f"Farming query detected: {message[:50]}... Calling API...")
         
         # For farming queries, ALWAYS call the API (no local fallback)
@@ -1017,6 +1114,127 @@ Write ENTIRE response in {lang_name} language ONLY. Be specific and practical.""
             }
             return error_messages.get(language, error_messages['en'])
 
+    # ---- Service-Enriched Response Methods ----
+
+    def _get_mandi_enriched_response(self, message: str, language: str = 'en') -> str:
+        """Get mandi price info from farmer_services + Gemini for natural language"""
+        commodity = mandi_service.detect_commodity_in_message(message)
+        data_context = ""
+        if commodity:
+            prices = mandi_service.get_mandi_prices(commodity)
+            data_context = f"Real data for {commodity}: {json.dumps(prices, ensure_ascii=False, default=str)}"
+        else:
+            msp = mandi_service.get_msp_data()
+            data_context = f"MSP Data: {json.dumps(msp, ensure_ascii=False, default=str)}"
+
+        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam', 'ta': 'Tamil', 'te': 'Telugu', 'kn': 'Kannada'}
+        lang_name = language_names.get(language, 'English')
+        prompt = f"""You are an expert agricultural market advisor. The farmer asks: "{message}"
+
+Here is REAL market data to use in your response:
+{data_context}
+
+Provide a helpful response in {lang_name} that includes:
+- Current market prices and MSP comparison
+- Whether to sell now or wait
+- Which mandi offers the best price
+- Practical selling advice
+
+Also mention: For live Mandi prices dashboard, visit the Farmer Dashboard.
+Write ENTIRELY in {lang_name}. Keep it concise and actionable."""
+        try:
+            return self._get_gemini_response(prompt, language)
+        except:
+            return data_context
+
+    def _get_scheme_enriched_response(self, message: str, language: str = 'en') -> str:
+        """Get scheme info from farmer_services + Gemini for natural language"""
+        schemes = scheme_service.get_all_schemes()
+        scheme_summary = []
+        for s in schemes[:5]:
+            scheme_summary.append(f"{s.get('name', {}).get('en', s.get('id', ''))}: {s.get('benefit', '')}")
+
+        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam', 'ta': 'Tamil', 'te': 'Telugu', 'kn': 'Kannada'}
+        lang_name = language_names.get(language, 'English')
+        prompt = f"""You are an expert agricultural advisor helping farmers with government schemes. The farmer asks: "{message}"
+
+Here are relevant government schemes data:
+{chr(10).join(scheme_summary)}
+
+Total schemes available: {len(schemes)}
+
+Provide a helpful response in {lang_name} that:
+- Lists the most relevant schemes for their query
+- Includes eligibility criteria and benefits
+- Explains how to apply (step by step)
+- Mentions required documents
+- Also mention: For full scheme details, visit the Farmer Dashboard's Government Schemes tab.
+Write ENTIRELY in {lang_name}. Keep it practical."""
+        try:
+            return self._get_gemini_response(prompt, language)
+        except:
+            return "\n".join(scheme_summary)
+
+    def _get_soil_enriched_response(self, message: str, language: str = 'en') -> str:
+        """Get soil health info from farmer_services + Gemini"""
+        analysis = soil_service.analyze_soil_symptoms(message)
+
+        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam', 'ta': 'Tamil', 'te': 'Telugu', 'kn': 'Kannada'}
+        lang_name = language_names.get(language, 'English')
+        prompt = f"""You are an expert soil scientist and agricultural advisor. The farmer asks: "{message}"
+
+Soil analysis data:
+- Detected issues: {analysis.get('detected_issues', [])}
+- Recommendations: {analysis.get('recommendations', [])}
+- General advice: {analysis.get('general_advice', [])}
+
+Provide a detailed response in {lang_name} with:
+- What the soil problem likely is
+- Specific fertilizer quantities (per hectare/acre)
+- Organic and chemical solutions
+- Prevention tips
+- Also mention: Use the Farmer Dashboard's Soil Health tab for NPK calculator.
+Write ENTIRELY in {lang_name}. Be specific with quantities."""
+        try:
+            return self._get_gemini_response(prompt, language)
+        except:
+            return json.dumps(analysis, ensure_ascii=False)
+
+    def _get_economics_enriched_response(self, message: str, language: str = 'en') -> str:
+        """Get farm economics from farmer_services + Gemini"""
+        crop = None
+        for c in ['wheat', 'rice', 'cotton', 'soybean', 'potato', 'onion', 'tomato', 'maize', 'sugarcane', 'mustard', 'chana']:
+            if c in message.lower():
+                crop = c
+                break
+
+        data_context = ""
+        if crop:
+            econ = economics_service.calculate_economics(crop, 1.0)
+            data_context = f"Economics for {crop} (1 hectare): {json.dumps(econ, ensure_ascii=False, default=str)}"
+        else:
+            comparison = economics_service.compare_crops(['wheat', 'rice', 'cotton', 'soybean', 'potato'])
+            data_context = f"Crop comparison: Best={comparison.get('best_crop')}, ROI={comparison.get('best_roi')}%"
+
+        language_names = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'pa': 'Punjabi', 'ml': 'Malayalam', 'ta': 'Tamil', 'te': 'Telugu', 'kn': 'Kannada'}
+        lang_name = language_names.get(language, 'English')
+        prompt = f"""You are an expert farm economics advisor. The farmer asks: "{message}"
+
+Real economics data:
+{data_context}
+
+Provide a helpful response in {lang_name} with:
+- Input cost breakdown
+- Expected yield and revenue
+- Net profit and ROI percentage
+- Practical advice to increase profit
+- Also mention: Use the Farmer Dashboard's Farm Economics tab for detailed calculator.
+Write ENTIRELY in {lang_name}. Use ₹ for currency."""
+        try:
+            return self._get_gemini_response(prompt, language)
+        except:
+            return data_context
+
     def _get_update_response(self, message: str, language: str = 'en') -> str:
         """Generate response for update/news queries with special prompt"""
         language_names = {
@@ -1024,7 +1242,10 @@ Write ENTIRE response in {lang_name} language ONLY. Be specific and practical.""
             'hi': 'Hindi', 
             'mr': 'Marathi',
             'pa': 'Punjabi',
-            'ml': 'Malayalam'
+            'ml': 'Malayalam',
+            'ta': 'Tamil',
+            'te': 'Telugu',
+            'kn': 'Kannada'
         }
         lang_name = language_names.get(language, 'English')
 
@@ -1093,7 +1314,10 @@ Provide the update/news in {lang_name} (remember: ONLY use {lang_name} language)
             'hi': 'Hindi', 
             'mr': 'Marathi',
             'pa': 'Punjabi',
-            'ml': 'Malayalam'
+            'ml': 'Malayalam',
+            'ta': 'Tamil',
+            'te': 'Telugu',
+            'kn': 'Kannada'
         }
         lang_name = language_names.get(language, 'English')
         
@@ -1636,6 +1860,220 @@ def weather_page():
             pass
     return render_template('weather.html', user=user)
 
+@app.route('/dashboard')
+def dashboard_page():
+    """Farmer Dashboard - Mandi prices, schemes, calendar, economics"""
+    user = None
+    if 'user_email' in session:
+        try:
+            query = "SELECT UserID, FullName, Email, PreferredLanguage FROM Users WHERE Email = ?"
+            result = execute_query(query, [session['user_email']], fetch=True)
+            if result:
+                user = {
+                    '_id': result[0][0],
+                    'fullName': result[0][1],
+                    'email': result[0][2],
+                    'languagePreference': result[0][3]
+                }
+        except:
+            pass
+    if not user:
+        return redirect(url_for('login'))
+    return render_template('dashboard.html', user=user)
+
+# ----------------------
+# Farmer Services API Routes
+# ----------------------
+
+def _get_crop_name(crop_key, lang='en'):
+    """Get localized crop name from COMMODITY_MAP. Returns only the selected language."""
+    if mandi_service and crop_key in mandi_service.COMMODITY_MAP:
+        names = mandi_service.COMMODITY_MAP[crop_key]
+        return names.get(lang, names.get('en', crop_key.title()))
+    return crop_key.title()
+
+@app.route('/api/crop-names', methods=['GET'])
+def api_crop_names():
+    """Return crop names in the requested language for dynamic dropdowns"""
+    lang = request.args.get('lang', session.get('language', 'en'))
+    if not mandi_service:
+        return jsonify({'success': False, 'error': 'Service unavailable'}), 503
+    
+    crop_emojis = {
+        'wheat': '🌾', 'rice': '🌾', 'onion': '🧅', 'potato': '🥔', 'tomato': '🍅',
+        'soybean': '🫘', 'cotton': '🏵️', 'mustard': '🌿', 'chana': '🫘', 'maize': '🌽',
+        'bajra': '🌾', 'jowar': '🌾', 'sugarcane': '🌿', 'turmeric': '🟡',
+        'garlic': '🧄', 'chilli': '🌶️', 'banana': '🍌', 'mango': '🥭',
+    }
+    
+    crops = {}
+    for key, names in mandi_service.COMMODITY_MAP.items():
+        localized = names.get(lang, names.get('en', key.title()))
+        emoji = crop_emojis.get(key, '🌱')
+        crops[key] = {'name': localized, 'emoji': emoji}
+    
+    return jsonify({'success': True, 'crops': crops, 'lang': lang})
+
+@app.route('/api/mandi/prices', methods=['GET'])
+def api_mandi_prices():
+    """Get real-time mandi prices for a commodity"""
+    if not mandi_service:
+        return jsonify({'error': 'Mandi service not available'}), 503
+    commodity = request.args.get('commodity', '').strip()
+    state = request.args.get('state', '').strip()
+    if not commodity:
+        return jsonify({'error': 'Commodity parameter is required'}), 400
+    try:
+        data = mandi_service.get_mandi_prices(commodity, state)
+        return jsonify({'success': True, **data})
+    except Exception as e:
+        print(f"Mandi prices error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/mandi/msp', methods=['GET'])
+def api_msp_data():
+    """Get MSP (Minimum Support Price) data"""
+    if not mandi_service:
+        return jsonify({'error': 'Mandi service not available'}), 503
+    try:
+        data = mandi_service.get_msp_data()
+        return jsonify({'success': True, 'msp_data': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/schemes', methods=['GET'])
+def api_schemes():
+    """Get all government schemes for farmers"""
+    if not scheme_service:
+        return jsonify({'error': 'Scheme service not available'}), 503
+    try:
+        crop = request.args.get('crop', '')
+        land_size = request.args.get('land_size', '')
+        if crop or land_size:
+            schemes = scheme_service.find_schemes(crop=crop, land_size=land_size)
+        else:
+            schemes = scheme_service.get_all_schemes()
+        return jsonify({'success': True, 'schemes': schemes})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/schemes/<scheme_id>', methods=['GET'])
+def api_scheme_details(scheme_id):
+    """Get details of a specific scheme"""
+    if not scheme_service:
+        return jsonify({'error': 'Scheme service not available'}), 503
+    try:
+        scheme = scheme_service.get_scheme_details(scheme_id)
+        if scheme:
+            return jsonify({'success': True, 'scheme': scheme})
+        return jsonify({'success': False, 'error': 'Scheme not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/crop-calendar', methods=['GET'])
+def api_crop_calendar():
+    """Get crop calendar for a specific month"""
+    if not crop_calendar_service:
+        return jsonify({'error': 'Calendar service not available'}), 503
+    try:
+        month = request.args.get('month', type=int)
+        data = crop_calendar_service.get_monthly_tasks(month=month)
+        return jsonify({'success': True, 'calendar': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/crop-calendar/season', methods=['GET'])
+def api_current_season():
+    """Get current agricultural season info"""
+    if not crop_calendar_service:
+        return jsonify({'error': 'Calendar service not available'}), 503
+    try:
+        data = crop_calendar_service.get_current_season()
+        return jsonify({'success': True, 'season': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/soil/fertilizer', methods=['GET'])
+def api_soil_fertilizer():
+    """Get fertilizer recommendation for a crop"""
+    if not soil_service:
+        return jsonify({'error': 'Soil service not available'}), 503
+    crop = request.args.get('crop', '').strip()
+    if not crop:
+        return jsonify({'error': 'Crop parameter is required'}), 400
+    try:
+        data = soil_service.get_fertilizer_recommendation(crop)
+        if data:
+            return jsonify({'success': True, 'recommendation': data})
+        return jsonify({'success': False, 'error': 'Crop not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/soil/analyze', methods=['POST'])
+def api_soil_analyze():
+    """Analyze soil symptoms"""
+    if not soil_service:
+        return jsonify({'error': 'Soil service not available'}), 503
+    data = request.get_json()
+    symptoms = data.get('symptoms', '').strip() if data else ''
+    if not symptoms:
+        return jsonify({'error': 'Symptoms parameter is required'}), 400
+    try:
+        analysis = soil_service.analyze_soil_symptoms(symptoms)
+        return jsonify({'success': True, 'analysis': analysis})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/economics/calculate', methods=['GET'])
+def api_economics_calculate():
+    """Calculate farm economics for a crop"""
+    if not economics_service:
+        return jsonify({'error': 'Economics service not available'}), 503
+    crop = request.args.get('crop', '').strip()
+    area = request.args.get('area', 1.0, type=float)
+    if not crop:
+        return jsonify({'error': 'Crop parameter is required'}), 400
+    try:
+        data = economics_service.calculate_economics(crop, area)
+        return jsonify({'success': True, 'economics': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/economics/compare', methods=['GET'])
+def api_economics_compare():
+    """Compare economics of multiple crops"""
+    if not economics_service:
+        return jsonify({'error': 'Economics service not available'}), 503
+    crops_str = request.args.get('crops', 'wheat,rice,cotton,soybean,potato')
+    crops = [c.strip() for c in crops_str.split(',') if c.strip()]
+    try:
+        data = economics_service.compare_crops(crops)
+        return jsonify({'success': True, **data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/alerts', methods=['GET'])
+def api_alerts():
+    """Get agricultural alerts with language support"""
+    if not alert_service:
+        return jsonify({'error': 'Alert service not available'}), 503
+    location = request.args.get('location', '')
+    crop = request.args.get('crop', '')
+    lang = request.args.get('lang', session.get('language', 'en'))
+    try:
+        alerts = alert_service.get_alerts(location=location, crop=crop)
+        # Localize alerts — use title_<lang> and message_<lang> if available
+        for alert in alerts:
+            lang_title_key = f'title_{lang}'
+            lang_msg_key = f'message_{lang}'
+            if lang != 'en' and lang_title_key in alert:
+                alert['title'] = alert[lang_title_key]
+            if lang != 'en' and lang_msg_key in alert:
+                alert['message'] = alert[lang_msg_key]
+        return jsonify({'success': True, 'alerts': alerts})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/document-test')
 def document_test():
     """Test page for document extraction feature"""
@@ -1782,79 +2220,239 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
-@app.route('/forgot-password', methods=['POST'])
-def forgot_password():
+# ========== FORGOT PASSWORD — OTP-BASED SECURE FLOW ==========
+
+@app.route('/forgot-password')
+def forgot_password_page():
+    """Render the OTP-based forgot password page."""
+    return render_template('forgot_password.html')
+
+
+def _send_otp_email(recipient_email, otp_code, user_name='Farmer'):
+    """Send OTP email via Gmail SMTP. Returns True on success."""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        print("  SMTP not configured! Set SMTP_EMAIL and SMTP_PASSWORD in .env")
+        return False
+    
+    msg = MIMEMultipart('alternative')
+    msg['From'] = f'Krishi Sujhav <{SMTP_EMAIL}>'
+    msg['To'] = recipient_email
+    msg['Subject'] = f'🔐 Password Reset OTP — Krishi Sujhav'
+    
+    # Plain text fallback
+    text_body = f"""Hello {user_name},
+
+Your OTP for password reset is: {otp_code}
+
+This code is valid for 5 minutes. Do NOT share it with anyone.
+
+If you did not request this, please ignore this email.
+
+— Team Krishi Sujhav"""
+    
+    # Beautiful HTML email
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="background:#0ea5a4;color:white;width:56px;height:56px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:24px;">🌾</div>
+        <h2 style="color:#1e293b;margin:12px 0 4px;">Krishi Sujhav</h2>
+        <p style="color:#64748b;font-size:14px;">Password Reset Request</p>
+      </div>
+      <p style="color:#334155;">Hello <strong>{user_name}</strong>,</p>
+      <p style="color:#334155;">Use this OTP to reset your password:</p>
+      <div style="text-align:center;margin:24px 0;">
+        <div style="display:inline-block;background:#f0fdf4;border:2px dashed #0ea5a4;border-radius:10px;padding:16px 40px;">
+          <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#0ea5a4;">{otp_code}</span>
+        </div>
+      </div>
+      <p style="color:#64748b;font-size:13px;">⏰ This code expires in <strong>5 minutes</strong>.</p>
+      <p style="color:#64748b;font-size:13px;">🔒 Never share this code with anyone.</p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;">
+      <p style="color:#94a3b8;font-size:12px;text-align:center;">If you didn't request this, you can safely ignore this email.<br>&copy; 2025 Krishi Sujhav — Farmer Assistant</p>
+    </div>
     """
-    API endpoint to reset user password.
-    Expects JSON with 'email' and 'new_password' fields.
-    Properly hashes the new password using bcrypt before storing.
-    """
+    
+    msg.attach(MIMEText(text_body, 'plain'))
+    msg.attach(MIMEText(html_body, 'html'))
+    
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, recipient_email, msg.as_string())
+        print(f"  ✅ OTP email sent to {recipient_email}")
+        return True
+    except smtplib.SMTPAuthenticationError:
+        print("  ❌ SMTP Auth Error — check SMTP_EMAIL / SMTP_PASSWORD (use Gmail App Password)")
+        return False
+    except Exception as e:
+        print(f"  ❌ SMTP Error: {e}")
+        return False
+
+
+@app.route('/api/send-otp', methods=['POST'])
+def send_otp():
+    """Generate a 6-digit OTP and email it to the user."""
     try:
         data = request.get_json()
-        
         email = data.get('email', '').strip().lower()
-        new_password = data.get('new_password', '')
         
-        # Validation
-        if not email or not new_password:
-            return jsonify({
-                'success': False,
-                'error': 'Email and new password are required'
-            }), 400
-        
-        if len(new_password) < 6:
-            return jsonify({
-                'success': False,
-                'error': 'Password must be at least 6 characters long'
-            }), 400
-        
-        # DEBUG logging
-        print(f"\n FORGOT PASSWORD REQUEST:")
-        print(f"   Email: {email}")
-        print(f"   New password length: {len(new_password)}")
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
         
         # Check if user exists
-        check_query = "SELECT UserID, FullName FROM Users WHERE Email = ?"
-        user_result = execute_query(check_query, [email], fetch=True)
-        
+        user_result = execute_query(
+            "SELECT UserID, FullName FROM Users WHERE Email = ?", [email], fetch=True
+        )
         if not user_result:
-            print(f"    Email not found: {email}")
+            return jsonify({'success': False, 'error': 'No account found with this email'}), 404
+        
+        user_name = user_result[0][1] or 'Farmer'
+        
+        # Rate limit: prevent spamming (1 OTP per 60s per email)
+        if email in otp_store:
+            last_sent = otp_store[email].get('sent_at')
+            if last_sent and (datetime.now() - last_sent).total_seconds() < 60:
+                return jsonify({'success': False, 'error': 'Please wait 60 seconds before requesting a new OTP'}), 429
+        
+        # Generate 6-digit OTP & unique token
+        otp_code = str(random.randint(100000, 999999))
+        token = secrets.token_urlsafe(32)
+        
+        print(f"\n🔐 OTP GENERATED for {email}: {otp_code}")
+        
+        # Store OTP with 5-minute expiry
+        from datetime import timedelta
+        otp_store[email] = {
+            'otp': otp_code,
+            'expiry': datetime.now() + timedelta(minutes=5),
+            'verified': False,
+            'attempts': 0,
+            'token': token,
+            'sent_at': datetime.now()
+        }
+        
+        # Send email via SMTP
+        email_sent = _send_otp_email(email, otp_code, user_name)
+        
+        if email_sent:
+            return jsonify({
+                'success': True,
+                'message': 'OTP sent to your email',
+                'token': token
+            }), 200
+        else:
+            # Even if SMTP fails, don't leak OTP — just tell user to retry
             return jsonify({
                 'success': False,
-                'error': 'Email not found'
-            }), 404
+                'error': 'Failed to send email. Please check SMTP configuration or try again later.'
+            }), 500
+            
+    except Exception as e:
+        print(f"  Error in send_otp: {e}")
+        return jsonify({'success': False, 'error': 'Server error. Please try again.'}), 500
+
+
+@app.route('/api/verify-otp', methods=['POST'])
+def verify_otp():
+    """Verify the 6-digit OTP entered by the user."""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        otp_input = data.get('otp', '').strip()
         
-        user_id = user_result[0][0]
-        full_name = user_result[0][1]
-        print(f"    User found: {full_name} (ID: {user_id})")
+        if not email or not otp_input:
+            return jsonify({'success': False, 'error': 'Email and OTP are required'}), 400
         
-        # Hash the new password using bcrypt (SECURITY: Never store plain text passwords!)
+        # Check if OTP exists for this email
+        if email not in otp_store:
+            return jsonify({'success': False, 'error': 'No OTP was sent to this email. Please request a new one.'}), 400
+        
+        stored = otp_store[email]
+        
+        # Check max attempts (5 tries)
+        if stored['attempts'] >= 5:
+            del otp_store[email]
+            return jsonify({'success': False, 'error': 'Too many failed attempts. Please request a new OTP.'}), 429
+        
+        # Check expiry
+        if datetime.now() > stored['expiry']:
+            del otp_store[email]
+            return jsonify({'success': False, 'error': 'OTP has expired. Please request a new one.'}), 410
+        
+        # Verify OTP
+        stored['attempts'] += 1
+        if otp_input != stored['otp']:
+            remaining = 5 - stored['attempts']
+            return jsonify({
+                'success': False,
+                'error': f'Invalid OTP. {remaining} attempt(s) remaining.'
+            }), 400
+        
+        # OTP verified — generate a reset token
+        reset_token = secrets.token_urlsafe(32)
+        stored['verified'] = True
+        stored['reset_token'] = reset_token
+        
+        print(f"  ✅ OTP verified for {email}")
+        return jsonify({
+            'success': True,
+            'message': 'OTP verified successfully',
+            'reset_token': reset_token
+        }), 200
+        
+    except Exception as e:
+        print(f"  Error in verify_otp: {e}")
+        return jsonify({'success': False, 'error': 'Server error'}), 500
+
+
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    """Reset user password after OTP verification."""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        new_password = data.get('new_password', '')
+        token = data.get('token', '')
+        
+        if not email or not new_password or not token:
+            return jsonify({'success': False, 'error': 'All fields are required'}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'error': 'Password must be at least 6 characters'}), 400
+        
+        # Verify the reset token
+        if email not in otp_store:
+            return jsonify({'success': False, 'error': 'Session expired. Please start over.'}), 400
+        
+        stored = otp_store[email]
+        if not stored.get('verified') or stored.get('reset_token') != token:
+            return jsonify({'success': False, 'error': 'Invalid or expired reset session. Please start over.'}), 403
+        
+        # Hash new password with bcrypt
         hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-        print(f"    Password hashed: {hashed_password[:30]}...")
         
         # Update password in database
         update_query = "UPDATE Users SET PasswordHash = ? WHERE Email = ?"
         result = execute_query(update_query, [hashed_password, email])
         
+        # Clean up OTP store
+        del otp_store[email]
+        
         if result:
-            print(f"    Password updated successfully for {email}")
+            print(f"  ✅ Password reset successful for {email}")
             return jsonify({
                 'success': True,
-                'message': 'Password updated successfully'
+                'message': 'Password reset successfully! Redirecting to login...'
             }), 200
         else:
-            print(f"    Failed to update password")
-            return jsonify({
-                'success': False,
-                'error': 'Failed to update password. Please try again.'
-            }), 500
+            return jsonify({'success': False, 'error': 'Failed to update password'}), 500
             
     except Exception as e:
-        print(f"    Error in forgot_password: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        print(f"  Error in reset_password: {e}")
+        return jsonify({'success': False, 'error': 'Server error'}), 500
 
 @app.route('/change-language/<language>')
 def change_language(language):
@@ -1905,7 +2503,10 @@ def translate_text():
             'hi': 'Hindi',
             'mr': 'Marathi',
             'pa': 'Punjabi',
-            'ml': 'Malayalam'
+            'ml': 'Malayalam',
+            'ta': 'Tamil',
+            'te': 'Telugu',
+            'kn': 'Kannada'
         }
         
         target_lang_name = lang_map.get(target_language, 'English')
@@ -2162,7 +2763,10 @@ def upload_document():
             'hi': 'Hindi',
             'mr': 'Marathi',
             'pa': 'Punjabi',
-            'ml': 'Malayalam'
+            'ml': 'Malayalam',
+            'ta': 'Tamil',
+            'te': 'Telugu',
+            'kn': 'Kannada'
         }
         lang_name = language_names.get(language, 'English')
         
@@ -2259,7 +2863,10 @@ def chat_with_document():
             'hi': 'Hindi',
             'mr': 'Marathi',
             'pa': 'Punjabi',
-            'ml': 'Malayalam'
+            'ml': 'Malayalam',
+            'ta': 'Tamil',
+            'te': 'Telugu',
+            'kn': 'Kannada'
         }
         lang_name = language_names.get(language, 'English')
         
@@ -2706,5 +3313,5 @@ def get_voice_commands():
 
 
 if __name__ == '__main__':
-    # Run without the Werkzeug reloader to avoid socket issues on some Windows setups
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    # Run without the Werkzeug reloader to avoid Anaconda/google-api-core conflict on Windows
+    app.run(debug=True, host='127.0.0.1', port=5000, use_reloader=False)
