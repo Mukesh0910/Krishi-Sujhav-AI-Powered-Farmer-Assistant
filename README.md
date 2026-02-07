@@ -1,261 +1,390 @@
-# Krishi Sujhav - AI-Powered Farmer Assistant
+# 🌾 Krishi Sujhav — AI-Powered Farmer Assistant Platform
 
-An intelligent farming assistant that combines AI-powered plant disease detection, real-time weather monitoring, and personalized agricultural advice using Google's Gemini AI.
+> A production-grade, intelligent farming platform built for real Indian farmers — combining **AI-powered crop diagnosis**, **real-time Mandi prices**, **government scheme discovery**, **soil health tools**, **farm economics**, and **multilingual voice interaction** in one unified dashboard.
 
-## Features
+![Flask](https://img.shields.io/badge/Flask-2.3-green?logo=flask)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.12-orange?logo=tensorflow)
+![Gemini AI](https://img.shields.io/badge/Google_Gemini-2.0-blue?logo=google)
+![Languages](https://img.shields.io/badge/Languages-8-blueviolet)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-### AI Assistant
-- Natural language chat interface powered by Google Gemini 2.0
-- Context-aware farming advice and recommendations
-- Multilingual support (5 languages: English, Hindi, Marathi, Punjabi, Malayalam)
-- Session-based chat history with 16MB storage limit
+---
 
-### Disease Detection
-- TensorFlow-based CNN model with 96% accuracy
-- Detects 16 plant diseases across 3 crop types (Potato, Tomato, Pepper)
-- Low confidence warnings for unclear predictions
-- Plant type consistency checking
-- Visual disease display with emojis and formatted names
+## ✨ What Makes This Different
 
-### Weather Integration
-- Real-time weather data via OpenWeather API
-- Location-based weather caching (60-minute refresh)
+This isn't a student project — it's a **market-ready platform** designed to directly impact farmer livelihoods. Every feature solves a real problem Indian farmers face daily:
+
+| Real Problem | Our Solution |
+|---|---|
+| Farmers sell crops below MSP because they don't know prices | **Live Mandi Price Intelligence** across 50+ markets |
+| Eligible farmers miss government subsidies | **Smart Scheme Finder** with 10+ schemes & eligibility matching |
+| Wrong fertilizer dosage wastes money | **NPK Calculator** with crop-specific recommendations |
+| Pest outbreaks destroy crops without warning | **Emergency Alert System** with real-time pest/weather warnings |
+| Language barriers with technology | **8 Indian languages** with full voice interaction |
+| Can't identify crop diseases | **AI Disease Detection** with 96% accuracy across 16 diseases |
+
+---
+
+## 🚀 Key Features
+
+### 🤖 AI Chat Assistant
+- **Google Gemini 2.0 Flash** powered conversational AI
+- Context-aware farming advice with smart query detection
+- Auto-detects Mandi price, scheme, soil, and economics queries
+- Enriched responses with real data from farmer services
+- Streaming responses for a natural chat experience
+
+### 🔬 Plant Disease Detection (ML)
+- **TensorFlow CNN** with **96% accuracy**
+- Detects **16 diseases** across 3 crops (Potato, Tomato, Pepper)
+- Low-confidence warnings & plant-type consistency checks
+- Camera/upload support with instant diagnosis
+
+### 💰 Mandi Price Intelligence
+- Real-time commodity prices from **data.gov.in API**
+- **18 major crops** with state-wise market comparisons
+- **MSP comparison** — see if market price is above/below government rate
+- Smart selling advice based on price trends
+- Intelligent fallback with market estimates when API is unavailable
+
+### 🏛️ Government Scheme Finder
+- **10 major schemes**: PM-KISAN, PMFBY, KCC, Soil Health Card, PM-KISAN Mandhan, PMKSY, e-NAM, PKVY, Agri Infra Fund, NFSM
+- Personalized recommendations based on crop, land size, and farmer type
+- Direct links to official application portals
+- Document checklist for each scheme
+
+### 📅 Crop Calendar & Seasonal Planner
+- **12-month farming calendar** with specific monthly tasks
+- Season detection (Kharif / Rabi / Zaid) with recommended crops
+- Region-aware alerts (frost, heatwave, monsoon timing)
+- Actionable tasks with timing guidance
+
+### 🧪 Soil Health Analysis
+- **NPK Fertilizer Calculator** — crop-specific urea/DAP/MOP quantities
+- **Soil Symptom Checker** — describe problems, get diagnostics
+- Application schedules (basal, top dressing, split doses)
+- Organic alternatives for every recommendation
+
+### 📊 Farm Economics Calculator
+- **Profit/Loss estimator** per crop and area
+- Cost breakdown (input cost per hectare, cost per quintal)
+- Revenue projection at MSP rates
+- **ROI comparison** across crops — find the most profitable one
+- Breakeven price analysis
+
+### 🚨 Emergency Alert System
+- **Pest outbreak warnings** (Yellow Rust, Aphids, Fall Armyworm)
+- **Weather alerts** (cold wave, heatwave, monsoon)
+- **Government deadlines** (PMFBY insurance, PM-KISAN installments)
+- Market alerts (MSP procurement season)
+- Severity levels: Critical / Warning / Info
+
+### 🌐 8 Indian Languages
+| Language | Code | Script |
+|---|---|---|
+| English | `en` | Latin |
+| Hindi | `hi` | देवनागरी |
+| Marathi | `mr` | देवनागरी |
+| Punjabi | `pa` | ਗੁਰਮੁਖੀ |
+| Malayalam | `ml` | മലയാളം |
+| Tamil | `ta` | தமிழ் |
+| Telugu | `te` | తెలుగు |
+| Kannada | `kn` | ಕನ್ನಡ |
+
+- Full dashboard localization — dropdowns, labels, alerts in selected language
+- Crop names shown in native script (e.g., गेहूं, ਕਣਕ, கோதுமை)
+- Voice input & output in regional languages
+
+### 🎙️ Voice Interaction System
+- Speech-to-text input for hands-free farming queries
+- Text-to-speech responses in regional languages
+- Quick voice commands for common tasks
+- Camera-based image analysis via voice flow
+
+### 📄 Document Analysis
+- Fast PDF & DOCX extraction (3-5 seconds)
+- Chat with uploaded documents
+- Batch document processing
+- 10-20x faster than traditional LangChain methods
+
+### 🔐 Secure Authentication
+- **BCrypt** password hashing with salt
+- **SMTP OTP-based Forgot Password** — real-time Gmail OTP delivery
+- 3-step secure flow: Email → 6-digit OTP → New Password → Auto-redirect
+- Rate limiting (1 OTP/60s), max 5 verification attempts, 5-minute expiry
+- Beautiful branded HTML email template
+- Session-based auth with SQL injection protection
+
+### 🌤️ Weather Integration
+- Real-time weather via **OpenWeather API**
+- Location-based caching (60-minute refresh)
 - Crop recommendations based on current conditions
-- Temperature, humidity, and weather condition tracking
+- Weather dashboard with forecast
 
-### Document Analysis
-- Fast PDF and DOCX extraction (3-5 seconds)
-- 10-20x faster than traditional methods
-- Supports batch document processing
-- Secure file upload handling
+---
 
-### Security
-- BCrypt password hashing
-- Session-based authentication
-- SQL injection protection with parameterized queries
-- Secure file upload validation
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 krishi_1/
 ├── backend/
-│   ├── app.py                          # Main Flask application 
+│   ├── app.py                          # Main Flask app (~3,300 lines, 40+ routes)
+│   ├── farmer_services.py              # 6 service classes (1,088 lines)
 │   ├── ml_model.py                     # TensorFlow model wrapper
+│   ├── simple_document_extractor.py    # Fast PDF/DOCX parser
 │   ├── requirements.txt                # Python dependencies
-│   ├── .env                            # Environment variables (DO NOT COMMIT)
 │   ├── .env.example                    # Environment template
 │   ├── models/
-│   │   ├── best_model_finetuned.h5     # Trained CNN model (~80MB)
-│   │   ├── classes.pkl                 # Disease class names
-│   │   └── class_info.pkl              # Disease metadata
-│   └── uploads/                        # Temporary file storage
+│   │   └── best_model_finetuned.h5     # Trained CNN model (~80MB)
+│   └── uploads/tmp/                    # Temporary file storage
 │
 ├── frontend/
 │   ├── templates/
-│   │   ├── index.html                  # Main chat interface
+│   │   ├── index.html                  # Main chat interface + sidebar nav
+│   │   ├── dashboard.html              # Farmer dashboard (6 tabbed views)
+│   │   ├── forgot_password.html        # OTP-based password reset (4 steps)
 │   │   ├── login.html                  # Login page
 │   │   ├── signup.html                 # Registration page
 │   │   └── weather.html                # Weather dashboard
 │   ├── static/js/
-│   │   ├── main.js                     # Chat & disease detection 
-│   │   ├── login.js                    # Login functionality
-│   │   ├── signup.js                   # Registration functionality
-│   │   ├── weather.js                  # Weather display
-│   │   ├── language.js                 # Translation system
-│   │   └── media.js                    # Shared utilities
+│   │   ├── main.js                     # Chat, disease detection, streaming
+│   │   ├── voice-system.js             # Voice input/output system
+│   │   ├── language.js                 # Translation & language switching
+│   │   ├── login.js                    # Login form validation
+│   │   ├── signup.js                   # Registration with validation
+│   │   └── media.js                    # Shared media utilities
 │   └── translations/
-│       └── translations.json           # Multi-language translations
+│       └── translations.json           # 8-language translation file
 │
-└── .gitignore                          # Git ignore rules
+├── README.md
+├── Procfile                            # Heroku deployment
+└── .gitignore
 ```
 
-## Installation
+---
+
+## ⚙️ Installation
 
 ### Prerequisites
-- Python 3.8 or higher
-- SQL Server (or SQL Server Express)
+- Python 3.8+
+- SQL Server (or SQL Server Express with SSMS)
 - pip (Python package manager)
+- Gmail account (for SMTP OTP)
 
-### Step 1: Clone the Repository
+### 1. Clone & Setup
 ```bash
 git clone https://github.com/yourusername/krishi-sujhav.git
 cd krishi-sujhav
-```
 
-### Step 2: Set Up Virtual Environment
-```bash
-# Create virtual environment
+# Create & activate virtual environment
 python -m venv .venv
-
-# Activate virtual environment
-# On Windows:
+# Windows:
 .venv\Scripts\activate
-# On macOS/Linux:
+# macOS/Linux:
 source .venv/bin/activate
-```
 
-### Step 3: Install Dependencies
-```bash
+# Install dependencies
 cd backend
 pip install -r requirements.txt
 ```
 
-### Step 4: Set Up Database
+### 2. Database Setup
 ```sql
--- Connect to your SQL Server and run:
+-- In SQL Server Management Studio:
 CREATE DATABASE farmDB;
 GO
-
-USE farmDB;
-GO
-
--- Users table will be created automatically on first run
+-- The Users table is created automatically on first run.
 ```
 
-### Step 5: Configure Environment Variables
-```bash
-# Copy the example environment file
-cp .env.example .env
+### 3. Environment Variables
+Copy `backend/.env.example` to `backend/.env` and fill in:
 
-# Edit .env with your actual credentials
-```
-
-Edit `backend/.env`:
 ```env
-FLASK_SECRET_KEY=your-random-secret-key-here
-GEMINI_API_KEY=your-gemini-api-key-here
-OPENWEATHER_API_KEY=your-openweather-api-key-here
+# Flask
+FLASK_SECRET_KEY=your-random-secret-key
+
+# Google Gemini AI
+GEMINI_API_KEY=your-gemini-api-key          # https://makersuite.google.com/app/apikey
+
+# OpenWeather
+OPENWEATHER_API_KEY=your-openweather-key    # https://openweathermap.org/api
+
+# SQL Server
 SQL_SERVER=your-server-name
 SQL_DATABASE=farmDB
-SQL_UID=your-database-username
-SQL_PWD=your-database-password
+SQL_DRIVER=ODBC Driver 17 for SQL Server
+TRUSTED_CONNECTION=YES
+
+# SMTP (Gmail — for Forgot Password OTP)
+SMTP_EMAIL=your-email@gmail.com
+SMTP_PASSWORD=your-gmail-app-password       # NOT your regular password!
 ```
 
-#### Getting API Keys:
-- **Gemini API Key**: Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
-- **OpenWeather API Key**: Register at [OpenWeatherMap](https://openweathermap.org/api)
+#### 📧 Gmail App Password Setup
+1. Go to [Google Account Security](https://myaccount.google.com/security)
+2. Enable **2-Step Verification**
+3. Go to [App Passwords](https://myaccount.google.com/apppasswords)
+4. Create one for **"Mail"** → copy the 16-character password
+5. Paste it as `SMTP_PASSWORD` in `.env`
 
-### Step 6: Run the Application
+### 4. Run
 ```bash
 cd backend
 python app.py
 ```
+Open **http://127.0.0.1:5000** in your browser.
 
-The application will be available at `http://127.0.0.1:5000`
+---
 
-## API Endpoints
+## 🔌 API Endpoints (40+)
 
 ### Authentication
-- `POST /api/signup` - User registration
-- `POST /api/login` - User login
-- `POST /api/logout` - User logout
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/login` | Login page |
+| `POST` | `/login` | Authenticate user |
+| `GET` | `/signup` | Registration page |
+| `POST` | `/signup` | Create account |
+| `GET` | `/logout` | Logout & clear session |
+| `GET` | `/forgot-password` | OTP password reset page |
+| `POST` | `/api/send-otp` | Send 6-digit OTP via Gmail SMTP |
+| `POST` | `/api/verify-otp` | Verify OTP (5 attempts, 5-min expiry) |
+| `POST` | `/api/reset-password` | Set new password after OTP verification |
 
-### Disease Detection
-- `POST /api/predict` - Analyze plant disease from image
-- `GET /api/model/info` - Get model information
+### AI Chat & Disease Detection
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/chat` | Send message to Gemini AI (streaming) |
+| `GET` | `/api/chat/history` | Get chat history |
+| `POST` | `/api/chat/clear` | Clear chat session |
+| `POST` | `/api/predict` | AI disease detection from image |
 
-### Chat & AI
-- `POST /api/chat` - Send message to AI assistant
-- `GET /api/chat/history` - Get chat history
-- `POST /api/chat/clear` - Clear chat history
+### Farmer Dashboard Services
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/crop-names?lang=hi` | Crop names in selected language |
+| `GET` | `/api/mandi/prices?commodity=wheat&state=punjab` | Live Mandi prices |
+| `GET` | `/api/mandi/msp` | MSP data for current season |
+| `GET` | `/api/schemes` | All government schemes |
+| `GET` | `/api/schemes/<id>` | Specific scheme details |
+| `GET` | `/api/crop-calendar?month=2` | Monthly farming tasks |
+| `GET` | `/api/crop-calendar/season` | Current season info |
+| `GET` | `/api/soil/fertilizer?crop=wheat` | NPK recommendation |
+| `POST` | `/api/soil/analyze` | Soil symptom analysis |
+| `GET` | `/api/economics/calculate?crop=wheat&area=2` | Profit calculator |
+| `GET` | `/api/economics/compare?crops=wheat,rice,cotton` | Crop comparison |
+| `GET` | `/api/alerts?lang=hi` | Agricultural alerts (localized) |
 
-### Weather
-- `POST /api/weather` - Get weather data for location
-- `POST /api/crop-recommendations` - Get crop recommendations
+### Weather & Other
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/weather?location=Delhi` | Real-time weather |
+| `POST` | `/api/translate` | Translate text via Gemini AI |
+| `POST` | `/api/document/upload` | Upload document |
+| `POST` | `/api/document/extract` | Extract text from document |
+| `POST` | `/api/voice/transcribe` | Voice-to-text |
+| `GET` | `/api/voice/quick-commands` | Voice command list |
 
-### Document Processing
-- `POST /api/upload-document` - Upload and analyze document
-- `POST /api/analyze-multiple` - Analyze multiple documents
+---
 
-### Translations
-- `GET /api/translations` - Get all translations
+## 🧠 ML Model Details
 
-## ML Model Details
+| Attribute | Value |
+|---|---|
+| Architecture | Convolutional Neural Network (CNN) |
+| Framework | TensorFlow / Keras |
+| Input Size | 224×224 RGB |
+| Accuracy | **96%** |
+| Classes | 16 disease types |
+| File Size | ~80 MB |
 
-**Model Architecture**: Convolutional Neural Network (CNN)
-**Framework**: TensorFlow/Keras
-**Input Size**: 224x224 RGB images
-**Accuracy**: 96%
-**Classes**: 16 disease types
+### Disease Classes
+- **Pepper** (2): Bacterial Spot, Healthy
+- **Potato** (3): Early Blight, Late Blight, Healthy
+- **Tomato** (10): Bacterial Spot, Early Blight, Late Blight, Leaf Mold, Septoria Leaf Spot, Spider Mites, Target Spot, Mosaic Virus, Yellow Leaf Curl Virus, Healthy
+- **Test** (1): Test class
 
-### Disease Classes:
-- **Pepper (2 classes)**: Bacterial Spot, Healthy
-- **Potato (3 classes)**: Early Blight, Late Blight, Healthy
-- **Tomato (10 classes)**: Bacterial Spot, Early Blight, Late Blight, Leaf Mold, Septoria Leaf Spot, Spider Mites, Target Spot, Mosaic Virus, Yellow Leaf Curl Virus, Healthy
-- **Testing (1 class)**: Test class
+---
 
-## Supported Languages
+## ⚡ Performance
 
-- English (EN)
-- Hindi (HI)
-- Marathi (MR)
-- Punjabi (PA)
-- Malayalam (ML)
+| Metric | Value |
+|---|---|
+| Disease Detection | 1.0–1.5 sec/image |
+| Chat Response | 1–3 sec (streaming) |
+| Document Extraction | 3–5 sec |
+| Weather Cache | 60 min |
+| Model Loading | 6.2 sec (first) / <0.1 sec (cached) |
+| Throughput | ~20,000+ predictions/day |
 
-## Technologies Used
+---
 
-### Backend
-- Flask 2.3.3
-- TensorFlow >= 2.12.0
-- Google GenerativeAI (Gemini)
-- PyODBC (SQL Server)
-- BCrypt (password hashing)
-- PyPDF2 & python-docx (document processing)
-- Pillow (image processing)
+## 🛡️ Security
 
-### Frontend
-- Vanilla JavaScript
-- Tailwind CSS
-- HTML5
+- ✅ **BCrypt** password hashing with salting
+- ✅ **SMTP OTP** forgot password (rate-limited, token-secured)
+- ✅ **Parameterized SQL queries** (SQL injection protection)
+- ✅ **Session-based auth** with Flask sessions
+- ✅ **CORS** protection
+- ✅ **File upload validation** (type + size checks)
+- ✅ **Environment variables** for all secrets
 
-## Performance
+---
 
-- **Model Loading**: 6.2 seconds (first time), <0.1 seconds (cached)
-- **Disease Detection**: 1.0-1.5 seconds per image
-- **Throughput**: 40-60 images per minute (~19,200-28,800 daily capacity)
-- **Document Extraction**: 3-5 seconds (10-20x faster than LangChain)
-- **Chat Response**: 1-3 seconds
-- **Weather Cache**: 60 minutes
-- **Package Size**: 10MB (98% smaller than LangChain alternative)
+## 🛠️ Tech Stack
 
-## Security Features
+| Layer | Technology |
+|---|---|
+| **Backend** | Flask 2.3, Python 3.8+ |
+| **AI/ML** | TensorFlow 2.12, Google Gemini 2.0 Flash |
+| **Database** | SQL Server (via PyODBC) |
+| **Auth** | Flask-BCrypt, SMTP OTP (Gmail) |
+| **Weather** | OpenWeather API |
+| **Market Data** | data.gov.in API |
+| **Frontend** | Vanilla JS, Tailwind CSS, HTML5 |
+| **Voice** | Web Speech API (STT + TTS) |
+| **Email** | Python smtplib + Gmail SMTP |
+| **Deployment** | Gunicorn, Heroku-ready (Procfile) |
 
-- BCrypt password hashing with salt rounds
-- Session-based authentication
-- SQL injection protection (parameterized queries)
-- File upload validation
-- CORS protection
-- Secure environment variable handling
+---
 
-## License
+## 🗺️ Roadmap
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- [x] AI Chat with Gemini 2.0
+- [x] Plant Disease Detection (16 classes)
+- [x] 8 Indian Language Support
+- [x] Farmer Dashboard with 6 service tabs
+- [x] Live Mandi Price Intelligence
+- [x] Government Scheme Finder (10 schemes)
+- [x] Crop Calendar (12-month)
+- [x] Soil Health & NPK Calculator
+- [x] Farm Economics & Crop Comparison
+- [x] Emergency Alert System
+- [x] SMTP OTP Forgot Password
+- [x] Full Dashboard Localization
+- [x] Voice Interaction System
+- [ ] Add more crop types for disease detection
+- [ ] PostgreSQL / MySQL support
+- [ ] Mobile app (React Native)
+- [ ] Offline mode with cached data
+- [ ] Community forum for farmers
+- [ ] WhatsApp Bot integration
 
-## Author
+---
+
+## 👤 Author
 
 **Mukesh Kumar**
 - GitHub: [@yourusername](https://github.com/yourusername)
 - LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
 
-## Contributing
+## 📄 License
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
-## Known Issues
+## 🤝 Contributing
 
-- Model only supports Potato, Tomato, and Pepper crops
-- Requires SQL Server (not SQLite)
-- Large model file (~80MB)
-
-## Future Enhancements
-
-- [ ] Add more crop types
-- [ ] Implement PostgreSQL/MySQL support
-- [ ] Mobile app version
-- [ ] Offline mode support
-- [ ] Advanced analytics dashboard
-- [ ] Community forum
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
 
 ## Support
 
@@ -263,4 +392,7 @@ For support, email mksahu857@gmail.com or create an issue in the repository.
 
 ---
 
-Made with love for farmers
+<p align="center">
+  🌾 <strong>Made with ❤️ for Indian Farmers</strong> 🌾<br>
+  <em>Empowering 150M+ Indian farmers with AI-driven agricultural intelligence</em>
+</p>
