@@ -124,22 +124,96 @@
     .animate-glow {
       animation: glow 2s ease-in-out infinite;
     }
+
+    /* Profile Dropdown */
+    .profile-dropdown {
+      transform: scale(0.95);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: top right;
+    }
+    .profile-dropdown.active {
+      transform: scale(1);
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Sidebar Resize Handle */
+    .sidebar-resize-handle {
+      position: absolute;
+      right: -3px;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      cursor: col-resize;
+      z-index: 20;
+      transition: background 0.2s;
+    }
+    .sidebar-resize-handle:hover,
+    .sidebar-resize-handle.active {
+      background: linear-gradient(to right, transparent, rgba(14,165,164,0.4), transparent);
+    }
+    .sidebar-resize-handle::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 3px;
+      height: 40px;
+      border-radius: 2px;
+      background: rgba(14,165,164,0.5);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .sidebar-resize-handle:hover::after {
+      opacity: 1;
+    }
+
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(14,165,164,0.25);
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(14,165,164,0.45);
+    }
+
+    /* No-select during resize */
+    .no-select {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Farmer theme subtle pattern */
+    .farmer-bg {
+      background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 40%, #fffbeb 100%);
+    }
   </style>
 </head>
-<body class="h-screen bg-slate-100 text-slate-900 antialiased">
+<body class="h-screen bg-gradient-to-br from-emerald-50/30 via-slate-50 to-amber-50/20 text-slate-900 antialiased">
   <div class="flex h-screen">
 
     <!-- Open Sidebar Button (Floating, appears when sidebar is closed) -->
-    <button id="openSidebarBtn" class="fixed left-4 top-20 z-30 bg-accent text-white p-3 rounded-full hover:bg-accent/90 transition-all duration-300 shadow-xl hidden">
+    <button id="openSidebarBtn" class="fixed left-4 top-20 z-30 bg-gradient-to-r from-accent to-emerald-600 text-white p-3 rounded-full hover:shadow-2xl transition-all duration-300 shadow-xl hidden hover:scale-110">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
       </svg>
     </button>
 
     <!-- Left Sidebar: Chat History (Collapsible) -->
-    <aside id="chatHistorySidebar" class="w-72 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 relative overflow-hidden">
+    <aside id="chatHistorySidebar" class="w-72 bg-gradient-to-b from-white to-slate-50/80 border-r border-slate-200/60 flex flex-col transition-all duration-300 relative" style="min-width:200px;max-width:500px;">
+      <!-- Resize Handle -->
+      <div id="sidebarResizeHandle" class="sidebar-resize-handle"></div>
       
-      <header class="p-4 border-b border-slate-200 font-semibold flex items-center justify-between">
+      <header class="p-4 border-b border-slate-200/80 font-semibold flex items-center justify-between bg-white/60 backdrop-blur-sm">
         <span>{{ translations.chat_history if translations and translations.chat_history else 'Chat History' }}</span>
         <div class="flex items-center gap-2">
           <a href="/dashboard" class="text-green-600 hover:text-green-700 p-1.5 rounded-lg hover:bg-green-50 transition-colors" title="Farmer Dashboard">
@@ -159,30 +233,43 @@
       </header>
       
       <!-- Chat History List -->
-      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="chatHistoryList">
+      <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar" id="chatHistoryList">
         <div class="text-sm text-slate-400 p-3">{{ translations.no_previous_chats if translations and translations.no_previous_chats else 'No previous chats' }}</div>
       </div>
       
-      <footer class="p-4 border-t border-slate-200 text-sm bg-white">
+      <footer class="border-t border-slate-200/60 text-sm bg-gradient-to-t from-slate-50/80 to-white/60 backdrop-blur-sm">
         <div id="footerContent">
           {% if user %}
-            <div class="flex items-center gap-3 pb-3 mb-3 border-b border-slate-100">
-              <div class="w-9 h-9 bg-accent rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                {{ user.fullName[0].upper() }}
+            <div class="p-3">
+              <!-- User Card -->
+              <div class="flex items-center gap-3 p-2.5 rounded-xl bg-gradient-to-r from-accent/8 to-emerald-50/80 mb-2">
+                <div class="w-10 h-10 bg-gradient-to-br from-accent to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0">
+                  {{ user.fullName[0].upper() }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-slate-800 truncate text-sm leading-tight">{{ user.fullName }}</p>
+                  <p class="text-[11px] text-slate-500 truncate leading-tight mt-0.5">🌾 {{ user.email if user.email else 'Farmer' }}</p>
+                </div>
               </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-xs text-slate-500 mb-0.5">{{ translations.logged_in_as if translations and translations.logged_in_as else 'Logged in as' }}</p>
-                <p class="font-semibold text-slate-800 truncate text-sm">{{ user.fullName }}</p>
+              <!-- Quick Actions Row -->
+              <div class="flex gap-1.5">
+                <a href="/dashboard" class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-accent/10 hover:bg-accent/20 text-accent text-xs font-medium transition-colors" title="Dashboard">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                  <span id="sidebarDashboardLabel" data-i18n="farmer_dashboard">Dashboard</span>
+                </a>
+                <button onclick="if(confirm('Are you sure?')) window.location.href='{{ url_for('logout') }}'" class="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-medium transition-colors" title="Logout">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                  <span id="logoutBtn" data-i18n="logout">Logout</span>
+                </button>
               </div>
             </div>
-            <button id="logoutBtn" onclick="if(confirm('{{ translations.confirm_clear if translations and translations.confirm_clear else 'Are you sure?' }}')) window.location.href='{{ url_for('logout') }}'" class="w-full px-4 py-2.5 text-center text-white bg-accent hover:bg-accent/90 rounded-lg font-medium transition-colors shadow-sm">
-              {{ translations.logout if translations and translations.logout else 'Logout' }}
-            </button>
           {% else %}
-            <div class="space-y-3">
-              <p class="font-medium text-slate-600 text-center">{{ translations.welcome_guest if translations and translations.welcome_guest else 'Welcome, Guest!' }}</p>
-              <a href="{{ url_for('login') }}" class="block w-full px-4 py-2.5 text-center bg-accent text-white rounded-lg hover:bg-accent/90 font-medium transition-colors shadow-sm">{{ translations.login_button if translations and translations.login_button else 'Login' }}</a>
-              <a href="{{ url_for('signup') }}" class="block w-full px-4 py-2.5 text-center border-2 border-accent text-accent rounded-lg hover:bg-accent/5 font-medium transition-colors">{{ translations.signup_button if translations and translations.signup_button else 'Sign Up' }}</a>
+            <div class="p-3 space-y-2">
+              <p class="font-medium text-slate-600 text-center text-xs">{{ translations.welcome_guest if translations and translations.welcome_guest else 'Welcome, Guest!' }}</p>
+              <div class="flex gap-2">
+                <a href="{{ url_for('login') }}" class="flex-1 px-3 py-2 text-center bg-gradient-to-r from-accent to-emerald-600 text-white rounded-lg hover:shadow-md text-xs font-medium transition-all">{{ translations.login_button if translations and translations.login_button else 'Login' }}</a>
+                <a href="{{ url_for('signup') }}" class="flex-1 px-3 py-2 text-center border border-accent text-accent rounded-lg hover:bg-accent/5 text-xs font-medium transition-colors">{{ translations.signup_button if translations and translations.signup_button else 'Sign Up' }}</a>
+              </div>
             </div>
           {% endif %}
         </div>
@@ -192,7 +279,7 @@
     <!-- Right Chat Section -->
     <main class="flex-1 flex flex-col">
       <!-- Chat Header with Weather -->
-      <header class="border-b border-slate-200 p-4 bg-white flex items-center justify-between">
+      <header class="border-b border-slate-200/60 p-4 bg-white/80 backdrop-blur-sm flex items-center justify-between">
         <!-- Left: Title and Live Weather -->
         <div class="flex items-center gap-4">
           <div class="h-10 w-10 bg-accent rounded-full flex items-center justify-center">
@@ -256,37 +343,112 @@
           </div>
         </div>
         
-        <!-- Right: Language and Settings -->
-        <div class="flex items-center gap-2">
+        <!-- Right: Language and User Profile -->
+        <div class="flex items-center gap-3">
+          <!-- Hidden userGreeting for language system compatibility -->
+          <span class="hidden" id="userGreeting">
+            {% if user %}Welcome, {{ user.fullName.split(' ')[0] }}!{% else %}Welcome! Please login to chat{% endif %}
+          </span>
+          
+          <!-- Language Selector -->
           <div class="relative">
-            <select id="languageSelector" onchange="changeGlobalLanguage(this.value)" class="text-sm border border-slate-300 rounded-lg px-3 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-accent">
-              <option value="en" {{ 'selected' if lang == 'en' else '' }}>English</option>
-              <option value="hi" {{ 'selected' if lang == 'hi' else '' }}>हिन्दी</option>
-              <option value="mr" {{ 'selected' if lang == 'mr' else '' }}>मराठी</option>
-              <option value="pa" {{ 'selected' if lang == 'pa' else '' }}>ਪੰਜਾਬੀ</option>
-              <option value="ml" {{ 'selected' if lang == 'ml' else '' }}>മലയാളം</option>
-              <option value="ta" {{ 'selected' if lang == 'ta' else '' }}>தமிழ்</option>
-              <option value="te" {{ 'selected' if lang == 'te' else '' }}>తెలుగు</option>
-              <option value="kn" {{ 'selected' if lang == 'kn' else '' }}>ಕನ್ನಡ</option>
+            <select id="languageSelector" onchange="changeGlobalLanguage(this.value)" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white/80 backdrop-blur focus:outline-none focus:ring-2 focus:ring-accent/40 cursor-pointer">
+              <option value="en" {{ 'selected' if lang == 'en' else '' }}>🌐 English</option>
+              <option value="hi" {{ 'selected' if lang == 'hi' else '' }}>🇮🇳 हिन्दी</option>
+              <option value="mr" {{ 'selected' if lang == 'mr' else '' }}>🇮🇳 मराठी</option>
+              <option value="pa" {{ 'selected' if lang == 'pa' else '' }}>🇮🇳 ਪੰਜਾਬੀ</option>
+              <option value="ml" {{ 'selected' if lang == 'ml' else '' }}>🇮🇳 മലയാളം</option>
+              <option value="ta" {{ 'selected' if lang == 'ta' else '' }}>🇮🇳 தமிழ்</option>
+              <option value="te" {{ 'selected' if lang == 'te' else '' }}>🇮🇳 తెలుగు</option>
+              <option value="kn" {{ 'selected' if lang == 'kn' else '' }}>🇮🇳 ಕನ್ನಡ</option>
             </select>
           </div>
-          <span class="text-sm text-slate-600" id="userGreeting">
+          
+          <!-- User Profile Dropdown -->
+          <div class="relative" id="profileContainer">
             {% if user %}
-              Welcome, {{ user.fullName.split(' ')[0] }}!
+            <button id="profileBtn" onclick="toggleProfileDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-all duration-200 group">
+              <div class="w-9 h-9 bg-gradient-to-br from-accent to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-shadow">
+                {{ user.fullName[0].upper() }}
+              </div>
+              <span class="text-sm font-medium text-slate-700 hidden sm:inline">{{ user.fullName.split(' ')[0] }}</span>
+              <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" id="profileChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            
+            <!-- Profile Dropdown Menu -->
+            <div id="profileDropdown" class="profile-dropdown absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200/60 overflow-hidden z-50">
+              <!-- User Info Header -->
+              <div class="px-5 py-4 bg-gradient-to-r from-accent/10 to-emerald-50 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-gradient-to-br from-accent to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
+                    {{ user.fullName[0].upper() }}
+                  </div>
+                  <div>
+                    <p class="font-semibold text-slate-900">{{ user.fullName }}</p>
+                    <p class="text-xs text-slate-500 flex items-center gap-1">🌾 Farmer • Krishi Sujhav</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Menu Items -->
+              <div class="py-1 max-h-64 overflow-y-auto custom-scrollbar">
+                <a href="/dashboard" class="flex items-center gap-3 px-5 py-2.5 hover:bg-gradient-to-r hover:from-accent/5 hover:to-emerald-50 transition-all text-sm text-slate-700 group">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                  </div>
+                  <span data-i18n="farmer_dashboard">Farmer Dashboard</span>
+                </a>
+                <a href="#" onclick="openWeatherPage();toggleProfileDropdown();return false;" class="flex items-center gap-3 px-5 py-2.5 hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-sky-50 transition-all text-sm text-slate-700 group">
+                  <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                  </div>
+                  <span data-i18n="weather_forecast">Weather Forecast</span>
+                </a>
+                <a href="#" onclick="document.getElementById('newChatBtn').click();toggleProfileDropdown();return false;" class="flex items-center gap-3 px-5 py-2.5 hover:bg-gradient-to-r hover:from-accent/5 hover:to-teal-50 transition-all text-sm text-slate-700 group">
+                  <div class="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center group-hover:bg-teal-200 transition-colors">
+                    <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                  </div>
+                  <span data-i18n="new_chat">New Chat</span>
+                </a>
+                <a href="#" onclick="document.getElementById('languageSelector').focus();toggleProfileDropdown();return false;" class="flex items-center gap-3 px-5 py-2.5 hover:bg-gradient-to-r hover:from-purple-50/80 hover:to-violet-50 transition-all text-sm text-slate-700 group">
+                  <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                    <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+                  </div>
+                  <span data-i18n="change_language">Change Language</span>
+                </a>
+              </div>
+              
+              <!-- Divider + Logout -->
+              <div class="border-t border-slate-100">
+                <div class="py-1.5">
+                  <button onclick="if(confirm('Are you sure you want to logout?')) window.location.href='{{ url_for('logout') }}'" class="flex items-center gap-3 px-5 py-2.5 hover:bg-red-50 transition-colors text-sm text-red-600 w-full text-left group">
+                    <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    </div>
+                    <span data-i18n="logout">Logout</span>
+                  </button>
+                </div>
+              </div>
+            </div>
             {% else %}
-              Welcome! Please login to chat
+            <div class="flex items-center gap-2">
+              <a href="{{ url_for('login') }}" class="px-4 py-1.5 text-sm bg-gradient-to-r from-accent to-emerald-600 text-white rounded-lg hover:shadow-lg font-medium transition-all">Login</a>
+              <a href="{{ url_for('signup') }}" class="px-4 py-1.5 text-sm border border-accent text-accent rounded-lg hover:bg-accent/5 font-medium transition-colors">Sign Up</a>
+            </div>
             {% endif %}
-          </span>
+          </div>
         </div>
       </header>
 
       <!-- Chat Messages -->
-      <div class="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col" id="chatMessages">
+      <div class="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col custom-scrollbar farmer-bg" id="chatMessages">
         <!-- Welcome message will be dynamically added by JavaScript -->
       </div>
 
       <!-- Footer Chat Input -->
-      <footer class="border-t border-slate-200 p-3 bg-white">
+      <footer class="border-t border-slate-200/60 p-3 bg-white/80 backdrop-blur-sm">
         <!-- Hidden file inputs -->
         <input type="file" id="imageInput" accept="image/*" style="display: none;" multiple>
         <input type="file" id="documentInput" accept=".pdf,.doc,.docx,.txt,.pptx" style="display: none;" multiple>
@@ -374,7 +536,7 @@
           <textarea 
             id="chatInput" 
             placeholder="{{ translations.chat_placeholder if translations and translations.chat_placeholder else 'Ask about crops, soil, or market prices...' }}" 
-            class="flex-1 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent resize-none min-h-[50px] max-h-[120px]"
+            class="flex-1 border border-slate-200/60 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 resize-none min-h-[50px] max-h-[120px] bg-white/60 backdrop-blur-sm placeholder:text-slate-400 transition-all shadow-sm"
             rows="1"></textarea>
 
           <!-- Right Voice Icon -->
@@ -430,6 +592,9 @@
 
       // Initialize chat history
       initializeChatHistory();
+
+      // Initialize sidebar resize
+      initializeSidebarResize();
     });
 
     // Sidebar Toggle Functionality
@@ -439,20 +604,84 @@
       const openSidebarBtn = document.getElementById('openSidebarBtn');
       let isOpen = true;
 
-      // Close sidebar button
       closeSidebarBtn.addEventListener('click', function() {
         isOpen = false;
-        sidebar.style.marginLeft = '-288px'; // -18rem (w-72 = 288px)
-        sidebar.style.width = '288px';
+        const currentWidth = parseInt(getComputedStyle(sidebar).width, 10);
+        sidebar.style.marginLeft = `-${currentWidth}px`;
         openSidebarBtn.classList.remove('hidden');
       });
 
-      // Open sidebar button
       openSidebarBtn.addEventListener('click', function() {
         isOpen = true;
         sidebar.style.marginLeft = '0';
-        sidebar.style.width = '288px'; // 18rem (w-72)
+        const savedWidth = localStorage.getItem('sidebarWidth');
+        if (savedWidth) sidebar.style.width = savedWidth + 'px';
         openSidebarBtn.classList.add('hidden');
+      });
+    }
+
+    // Profile Dropdown Toggle
+    function toggleProfileDropdown() {
+      const dropdown = document.getElementById('profileDropdown');
+      const chevron = document.getElementById('profileChevron');
+      if (dropdown) {
+        dropdown.classList.toggle('active');
+        if (chevron) chevron.style.transform = dropdown.classList.contains('active') ? 'rotate(180deg)' : '';
+      }
+    }
+
+    // Close profile dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      const container = document.getElementById('profileContainer');
+      const dropdown = document.getElementById('profileDropdown');
+      if (container && dropdown && !container.contains(e.target)) {
+        dropdown.classList.remove('active');
+        const chevron = document.getElementById('profileChevron');
+        if (chevron) chevron.style.transform = '';
+      }
+    });
+
+    // Resizable Sidebar
+    function initializeSidebarResize() {
+      const sidebar = document.getElementById('chatHistorySidebar');
+      const handle = document.getElementById('sidebarResizeHandle');
+      if (!sidebar || !handle) return;
+
+      let isResizing = false;
+      let startX, startWidth;
+
+      // Restore saved width
+      const savedWidth = localStorage.getItem('sidebarWidth');
+      if (savedWidth) {
+        sidebar.style.width = savedWidth + 'px';
+      }
+
+      handle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(getComputedStyle(sidebar).width, 10);
+        document.body.classList.add('no-select');
+        sidebar.style.transition = 'none';
+        handle.classList.add('active');
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        const newWidth = startWidth + (e.clientX - startX);
+        if (newWidth >= 200 && newWidth <= 500) {
+          sidebar.style.width = newWidth + 'px';
+        }
+      });
+
+      document.addEventListener('mouseup', function() {
+        if (!isResizing) return;
+        isResizing = false;
+        document.body.classList.remove('no-select');
+        sidebar.style.transition = '';
+        handle.classList.remove('active');
+        const currentWidth = parseInt(getComputedStyle(sidebar).width, 10);
+        localStorage.setItem('sidebarWidth', currentWidth);
       });
     }
 
@@ -678,13 +907,21 @@
     function addMessageToChat(text, type) {
       const chatMessages = document.getElementById('chatMessages');
       const msgDiv = document.createElement('div');
-      msgDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'} mb-4`;
+      msgDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'} mb-4 items-end gap-2`;
+      
+      // Avatar for AI messages
+      if (type !== 'user') {
+        const avatar = document.createElement('div');
+        avatar.className = 'w-8 h-8 bg-gradient-to-br from-accent to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md';
+        avatar.textContent = 'KS';
+        msgDiv.appendChild(avatar);
+      }
       
       const bubble = document.createElement('div');
-      bubble.className = `max-w-[70%] px-4 py-3 rounded-lg ${
+      bubble.className = `max-w-[70%] px-4 py-3 rounded-2xl ${
         type === 'user' 
-          ? 'bg-accent text-white rounded-br-none' 
-          : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'
+          ? 'bg-gradient-to-br from-accent to-emerald-600 text-white rounded-br-sm shadow-md' 
+          : 'bg-white/90 backdrop-blur border border-slate-200/60 text-slate-800 rounded-bl-sm shadow-sm'
       }`;
       bubble.style.whiteSpace = 'pre-wrap';
       bubble.textContent = text;
@@ -699,19 +936,47 @@
       console.log('Loading chat:', chatId);
     }
 
-    // Add welcome message
+    // Add welcome message with quick-action cards
     function addWelcomeMessage() {
       const chatMessages = document.getElementById('chatMessages');
       const welcome = document.createElement('div');
-      welcome.className = 'text-center py-12';
+      welcome.className = 'text-center py-8 max-w-2xl mx-auto w-full';
       welcome.innerHTML = `
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-accent/10 rounded-full mb-4">
-          <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-          </svg>
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-accent/20 to-emerald-100 rounded-full mb-4 shadow-lg">
+          <span class="text-4xl">🌾</span>
         </div>
-        <h2 class="text-2xl font-bold text-slate-800 mb-2">Welcome to Krishi Sujhav</h2>
-        <p class="text-slate-600">Ask me anything about crops, diseases, weather, or farming advice!</p>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-700 to-accent bg-clip-text text-transparent mb-2">Welcome to Krishi Sujhav</h2>
+        <p class="text-slate-500 mb-8">Your AI-powered farming companion. Ask me anything!</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+          <div onclick="document.getElementById('chatInput').value='What crops should I grow this season?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg">🌱</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Crop Advice</span>
+            </div>
+            <p class="text-xs text-slate-400">What crops should I grow this season?</p>
+          </div>
+          <div onclick="document.getElementById('chatInput').value='How to protect crops from pests?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg">🛡️</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Pest Control</span>
+            </div>
+            <p class="text-xs text-slate-400">How to protect crops from pests?</p>
+          </div>
+          <div onclick="document.getElementById('chatInput').value='What is the current market price of wheat?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg">📊</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Market Prices</span>
+            </div>
+            <p class="text-xs text-slate-400">Current market price of wheat?</p>
+          </div>
+          <div onclick="document.getElementById('chatInput').value='How is the weather forecast for this week?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg">🌤️</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Weather</span>
+            </div>
+            <p class="text-xs text-slate-400">Weather forecast for this week?</p>
+          </div>
+        </div>
       `;
       chatMessages.appendChild(welcome);
     }

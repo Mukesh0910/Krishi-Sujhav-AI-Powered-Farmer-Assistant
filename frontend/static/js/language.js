@@ -4,23 +4,23 @@ let allTranslations = {};
 
 // Global language change function
 async function changeGlobalLanguage(language) {
-  // Convert language codes to language names for backend
-  const langMap = {'en': 'english', 'hi': 'hindi', 'mr': 'marathi', 'pa': 'punjabi', 'ml': 'malayalam'};
-  const langName = langMap[language] || language;
+  // Always use 2-letter codes for backend consistency
+  const codeMap = {'english': 'en', 'hindi': 'hi', 'marathi': 'mr', 'punjabi': 'pa', 'malayalam': 'ml', 'tamil': 'ta', 'telugu': 'te', 'kannada': 'kn'};
+  const langCode = codeMap[language] || language; // normalize to 2-letter
   
   try {
-    // Change language in backend
-    const response = await fetch(`/change-language/${langName}`);
+    // Change language in backend using 2-letter code
+    const response = await fetch(`/change-language/${langCode}`);
     
     if (response.ok) {
       // Update entire UI with new language
-      updateUILanguage(language);
+      updateUILanguage(langCode);
       
       // Store language preference
-      localStorage.setItem('preferredLanguage', language);
-      window.APP_LANG = language;
+      localStorage.setItem('preferredLanguage', langCode);
+      window.APP_LANG = langCode;
       
-      console.log('Language changed to:', language);
+      console.log('Language changed to:', langCode);
     } else {
       console.error('Failed to change language');
     }
@@ -164,6 +164,12 @@ function updateUILanguage(language) {
     logoutBtn.textContent = t.logout || 'Logout';
   }
   
+  // Update all data-i18n elements (profile dropdown, sidebar, etc.)
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key]) el.textContent = t[key];
+  });
+
   // Store translations for later use in dynamic content
   window.currentLanguageData = {
     typing: t.ai_thinking || 'AI is thinking...',
@@ -188,34 +194,40 @@ function updateUILanguage(language) {
   console.log('UI updated for language:', language);
 }
 
-// Initialize language selector
+// Initialize language selector — works on ANY page
 async function initializeLanguageSelector() {
   // Load translations first
   await loadTranslations();
   
-  // Add event listeners to language selector dropdown
-  const languageSelector = document.getElementById('languageSelector');
+  // Try multiple possible selector IDs across pages
+  const languageSelector = document.getElementById('languageSelector') || document.getElementById('pageLangSelector') || document.getElementById('languagePreference');
+  
+  // Get saved language from localStorage or server
+  const savedLanguage = localStorage.getItem('preferredLanguage') || (languageSelector ? languageSelector.value : null) || 'en';
+  
+  // Normalize saved lang (could be full name from old signup)
+  const codeMap = {'english': 'en', 'hindi': 'hi', 'marathi': 'mr', 'punjabi': 'pa', 'malayalam': 'ml', 'tamil': 'ta', 'telugu': 'te', 'kannada': 'kn'};
+  const normalizedLang = codeMap[savedLanguage] || savedLanguage;
+  
   if (languageSelector) {
-    // Get saved language or use current selection from server
-    const savedLanguage = localStorage.getItem('preferredLanguage') || languageSelector.value || 'en';
-    
     // Update selector if different from saved
-    if (languageSelector.value !== savedLanguage) {
-      languageSelector.value = savedLanguage;
-    }
-    
-    // Apply translations immediately for saved language
-    if (allTranslations[savedLanguage]) {
-      updateUILanguage(savedLanguage);
+    if (languageSelector.value !== normalizedLang) {
+      languageSelector.value = normalizedLang;
     }
     
     // Listen for language changes
     languageSelector.addEventListener('change', function() {
       changeGlobalLanguage(this.value);
     });
-    
-    console.log('Language selector initialized with language:', savedLanguage);
   }
+  
+  // Apply translations immediately for saved language on ALL pages
+  if (allTranslations[normalizedLang]) {
+    updateUILanguage(normalizedLang);
+  }
+  
+  window.APP_LANG = normalizedLang;
+  console.log('Language initialized:', normalizedLang);
 }
 
 // Initialize when DOM is ready

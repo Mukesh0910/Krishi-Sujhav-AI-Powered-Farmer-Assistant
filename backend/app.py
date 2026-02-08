@@ -69,38 +69,49 @@ CORS(app)
 bcrypt = Bcrypt(app)
 
 # ----------------------
-# SQL Server Setup (Direct pyodbc)
+# PostgreSQL Setup (Render.com / Production)
 # ----------------------
-import pyodbc
+import psycopg2
+import psycopg2.extras
+from urllib.parse import urlparse
 
 def get_connection():
-    """Get direct SQL Server connection"""
+    """Get PostgreSQL connection using DATABASE_URL (Render) or individual env vars"""
     try:
-        # Build connection string
-        server = os.getenv('SQL_SERVER', 'LAPTOP-MUKESH\\SQLEXPRESS')
-        database = os.getenv('SQL_DATABASE', 'farmDB')
-        trusted = os.getenv('TRUSTED_CONNECTION', 'YES')
-        driver = os.getenv('SQL_DRIVER', 'ODBC Driver 17 for SQL Server')
+        database_url = os.getenv('DATABASE_URL', '')
         
-        if trusted.upper() == 'YES':
-            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection=yes;TrustServerCertificate=yes"
+        if database_url:
+            # Render provides DATABASE_URL (Internal URL for same-region services)
+            # Fix: Render gives postgres:// but psycopg2 needs postgresql://
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            conn = psycopg2.connect(database_url)
         else:
-            username = os.getenv('SQL_USERNAME', '')
-            password = os.getenv('SQL_PASSWORD', '')
-            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};TrustServerCertificate=yes"
+            # Fallback to individual env vars (local dev)
+            conn = psycopg2.connect(
+                host=os.getenv('PG_HOST', 'localhost'),
+                port=os.getenv('PG_PORT', '5432'),
+                database=os.getenv('PG_DATABASE', 'farmdb'),
+                user=os.getenv('PG_USER', 'postgres'),
+                password=os.getenv('PG_PASSWORD', '')
+            )
         
-        conn = pyodbc.connect(conn_str)
+        conn.autocommit = False
         return conn
     except Exception as e:
         print(f" Database connection failed: {e}")
         return None
 
 def execute_query(query, params=None, fetch=False):
-    """Execute SQL query with optional parameters"""
+    """Execute SQL query with optional parameters (PostgreSQL compatible).
+    Converts ? placeholders to %s for psycopg2."""
     conn = get_connection()
     if not conn:
         return None
     try:
+        # Convert SQL Server style ? placeholders to PostgreSQL %s
+        query = query.replace('?', '%s')
+        
         cursor = conn.cursor()
         if params:
             cursor.execute(query, params)
@@ -122,20 +133,92 @@ def execute_query(query, params=None, fetch=False):
         import traceback
         traceback.print_exc()
         if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
             conn.close()
         return None
+
+# Initialize database tables (PostgreSQL)
+def init_database():
+    """Create tables if they don't exist (PostgreSQL)"""
+    conn = get_connection()
+    if not conn:
+        print(" Cannot initialize database — no connection")
+        return
+    try:
+        cursor = conn.cursor()
+        
+        # Create Users table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Users (
+                UserID SERIAL PRIMARY KEY,
+                FullName VARCHAR(200) NOT NULL,
+                Email VARCHAR(200) UNIQUE NOT NULL,
+                PasswordHash VARCHAR(500) NOT NULL,
+                PreferredLanguage VARCHAR(10) DEFAULT 'en',
+                Location VARCHAR(200),
+                Role VARCHAR(50) DEFAULT 'Farmer',
+                CreatedAt TIMESTAMP DEFAULT NOW(),
+                LastLogin TIMESTAMP
+            )
+        """)
+        
+        # Create Chats table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Chats (
+                ID SERIAL PRIMARY KEY,
+                UserID INTEGER REFERENCES Users(UserID) ON DELETE CASCADE,
+                UserMessage TEXT,
+                AIResponse TEXT,
+                Language VARCHAR(10) DEFAULT 'en',
+                HasImages INTEGER DEFAULT 0,
+                DetectedDiseases TEXT,
+                Timestamp TIMESTAMP DEFAULT NOW(),
+                SessionID VARCHAR(100)
+            )
+        """)
+        
+        # Create indexes for performance
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_chats_userid ON Chats(UserID)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_chats_sessionid ON Chats(SessionID)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_users_email ON Users(Email)
+        """)
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print(" Database tables initialized (PostgreSQL)")
+    except Exception as e:
+        print(f" Database init error: {e}")
+        import traceback
+        traceback.print_exc()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+            conn.close()
 
 # Test database connection on startup
 try:
     test_conn = get_connection()
     if test_conn:
         test_conn.close()
-        print(" Connected to SQL Server successfully!")
-        print(f"   Server: {os.getenv('SQL_SERVER', 'Not configured')}")
-        print(f"   Database: {os.getenv('SQL_DATABASE', 'Not configured')}")
-        print("   Using direct pyodbc connection")
+        print(" Connected to PostgreSQL successfully!")
+        db_url = os.getenv('DATABASE_URL', 'local')
+        print(f"   Source: {'Render DATABASE_URL' if db_url != 'local' else 'Local PostgreSQL'}")
+        print("   Using psycopg2 driver")
+        # Initialize tables
+        init_database()
     else:
-        print(" Failed to connect to SQL Server")
+        print(" Failed to connect to PostgreSQL")
 except Exception as e:
     print(f" Database connection test failed: {e}")
 
@@ -162,7 +245,7 @@ def calculate_session_size(session_id):
     """Calculate total size of messages in a session (in MB)"""
     try:
         query = """
-            SELECT SUM(DATALENGTH(UserMessage) + DATALENGTH(AIResponse)) / 1024.0 / 1024.0 as SizeMB
+            SELECT COALESCE(SUM(LENGTH(UserMessage) + LENGTH(AIResponse)), 0) / 1024.0 / 1024.0 as SizeMB
             FROM Chats 
             WHERE SessionID = ?
         """
@@ -198,7 +281,7 @@ def get_user_sessions(user_email):
                 SessionID,
                 MIN(Timestamp) as FirstMessageTime,
                 COUNT(*) as MessageCount,
-                (SELECT TOP 1 UserMessage FROM Chats WHERE SessionID = c.SessionID ORDER BY Timestamp ASC) as FirstMessage
+                (SELECT UserMessage FROM Chats WHERE SessionID = c.SessionID ORDER BY Timestamp ASC LIMIT 1) as FirstMessage
             FROM Chats c
             WHERE UserID = ? AND SessionID IS NOT NULL
             GROUP BY SessionID
@@ -246,8 +329,8 @@ OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')  # Add OpenWeather AP
 if GEMINI_API_KEY and GEMINI_API_KEY != '' and genai is not None:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-        print(" Gemini AI configured successfully!")
+        gemini_model = genai.GenerativeModel('gemini-2.0-flash')
+        print(" Gemini AI configured successfully with gemini-2.0-flash!")
     except Exception as e:
         print(f" Failed to configure Gemini AI: {e}")
         gemini_model = None
@@ -456,7 +539,9 @@ class FarmingAI:
         ]
     
     def is_farming_related(self, message: str) -> bool:
-        """Check if the message is related to farming/agriculture"""
+        """Check if the message is related to farming/agriculture.
+        Lenient approach: allow ambiguous queries through to Gemini, only reject clearly non-farming topics.
+        """
         msg = (message or "").lower().strip()
         
         # Empty message check
@@ -469,23 +554,31 @@ class FarmingAI:
         if any(re.search(pattern, msg) if pattern.startswith(r'\b') else pattern in msg for pattern in greetings):
             return True
         
-        # Check for non-farming topics (explicit rejection)
-        for non_farming_word in self.non_farming_topics:
-            if non_farming_word in msg:
-                # Check if there are any farming keywords too (mixed context)
-                has_farming_context = any(farming_word in msg for farming_word in self.farming_keywords)
-                if not has_farming_context:
-                    # Pure non-farming topic, reject
-                    return False
-        
         # Check for farming keywords (explicit acceptance)
         for farming_word in self.farming_keywords:
             if farming_word in msg:
                 return True
         
-        # For short messages without clear keywords, reject (be strict)
-        # This prevents generic queries like "what", "tell me", "how" from passing
-        return False
+        # Check for non-farming topics (explicit rejection) — only reject if NO farming context at all
+        non_farming_score = 0
+        for non_farming_word in self.non_farming_topics:
+            if non_farming_word in msg:
+                non_farming_score += 1
+        
+        # Only reject if clearly non-farming (multiple non-farming keywords and zero farming keywords)
+        if non_farming_score >= 2:
+            return False
+        
+        # For single non-farming keyword, still reject
+        if non_farming_score == 1:
+            return False
+        
+        # For ambiguous messages (no clear farming or non-farming keywords),
+        # ALLOW them through to Gemini — let the AI decide if it's farming-related
+        # This prevents rejecting legitimate farming queries that don't use exact keywords
+        # Examples: "what should I do this season?", "how to increase income?", "suggest something"
+        print(f"  Ambiguous query — allowing through to Gemini: {msg[:50]}...")
+        return True
 
     def is_update_query(self, message: str) -> bool:
         """Check if user is asking for current updates/news about farming topics"""
@@ -1106,11 +1199,14 @@ Write ENTIRE response in {lang_name} language ONLY. Be specific and practical.""
             # If API fails, return error message instead of fallback
             print(f" API Error: {e}")
             error_messages = {
-                'en': "I apologize, but I'm having trouble connecting to my knowledge base right now. Please try again in a moment.",
-                'hi': "मुझे खेद है, लेकिन मुझे अभी अपने ज्ञान आधार से जुड़ने में परेशानी हो रही है। कृपया एक क्षण में पुन: प्रयास करें।",
-                'mr': "मला माफ करा, पण मला सध्या माझ्या ज्ञानकोशाशी कनेक्ट होण्यात अडचण येत आहे. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.",
-                'pa': "ਮੈਨੂੰ ਮਾਫ਼ ਕਰੋ, ਪਰ ਮੈਨੂੰ ਹੁਣ ਆਪਣੇ ਗਿਆਨ ਆਧਾਰ ਨਾਲ ਜੁੜਨ ਵਿੱਚ ਮੁਸ਼ਕਲ ਆ ਰਹੀ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਇੱਕ ਪਲ ਵਿੱਚ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
-                'ml': "ക്ഷമിക്കണം, എന്നാൽ എന്റെ അറിവ് അടിത്തറയുമായി ബന്ധിപ്പിക്കുന്നതിൽ എനിക്ക് ഇപ്പോൾ പ്രശ്നമുണ്ട്. ഒരു നിമിഷത്തിനുള്ളിൽ വീണ്ടും ശ്രമിക്കുക."
+                'en': "I'm sorry, I'm having trouble connecting right now. Please try again in a moment. 🙏",
+                'hi': "क्षमा करें, अभी कनेक्शन में समस्या हो रही है। कृपया थोड़ी देर में पुन: प्रयास करें। 🙏",
+                'mr': "माफ करा, सध्या कनेक्शनमध्ये अडचण आहे. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा. 🙏",
+                'pa': "ਮਾਫ਼ ਕਰਨਾ, ਹੁਣ ਕਨੈਕਸ਼ਨ ਵਿੱਚ ਸਮੱਸਿਆ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਥੋੜ੍ਹੀ ਦੇਰ ਬਾਅਦ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ। 🙏",
+                'ml': "ക്ഷമിക്കണം, ഇപ്പോൾ കണക്ഷനിൽ പ്രശ്നമുണ്ട്. ഒരു നിമിഷത്തിനുള്ളിൽ വീണ്ടും ശ്രമിക്കുക. 🙏",
+                'ta': "மன்னிக்கவும், இப்போது இணைப்பில் சிக்கல் உள்ளது. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும். 🙏",
+                'te': "క్షమించండి, ప్రస్తుతం కనెక్షన్‌లో సమస్య ఉంది. దయచేసి కొన్ని క్షణాల్లో మళ్ళీ ప్రయత్నించండి. 🙏",
+                'kn': "ಕ್ಷಮಿಸಿ, ಈಗ ಸಂಪರ್ಕದಲ್ಲಿ ಸಮಸ್ಯೆ ಇದೆ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ. 🙏"
             }
             return error_messages.get(language, error_messages['en'])
 
@@ -1308,7 +1404,7 @@ Provide the update/news in {lang_name} (remember: ONLY use {lang_name} language)
             return error_messages.get(language, error_messages['en'])
 
     def _get_gemini_response(self, message: str, language: str = 'en') -> str:
-        """Generate response using Gemini API ONLY. No fallback."""
+        """Generate response using Gemini API. Tries native client first, then REST fallback."""
         language_names = {
             'en': 'English',
             'hi': 'Hindi', 
@@ -1324,32 +1420,69 @@ Provide the update/news in {lang_name} (remember: ONLY use {lang_name} language)
         # Debug: Log the language being used
         print(f"Generating response in {lang_name} (code: {language})")
 
-        farming_prompt = f"""You are an expert agricultural advisor and farming assistant. Design your response for a farmer: use simple, non-technical language, provide step-by-step, actionable guidance, prioritize low-cost and local solutions, and include safety and timing considerations when relevant. Respond to farming questions with practical, accurate, and helpful advice.\n\nKey guidelines:\n- Focus specifically on agriculture, farming, crops, livestock, soil management, pest control, irrigation, fertilizers, seeds, weather, market prices, and related topics\n- Provide actionable, practical advice that farmers can implement (steps, materials, and approximate timings)\n- Consider sustainable and organic farming practices where possible\n- Be supportive and encouraging to farmers\n- If asked about non-farming topics, politely redirect to agricultural topics\n- Keep responses concise but informative (2-3 short paragraphs; include a 2-4 bullet step plan when helpful)\n- IMPORTANT: You MUST write your ENTIRE response in {lang_name} language ONLY. Every word, sentence, and paragraph must be in {lang_name}.\n\nFarmer's question: {message}\n\nPlease provide helpful farming advice designed for a farmer (write completely in {lang_name}):"""
+        # Check if prompt already has its own system instructions (enriched prompts)
+        is_custom_prompt = ("You are an expert" in message or "Here is REAL" in message 
+                           or "Real data" in message or "Soil analysis" in message
+                           or "disease detection" in message or "Disease detected" in message)
+
+        if is_custom_prompt:
+            # Use the message as-is (it already has full instructions)
+            farming_prompt = message
+        else:
+            # Apply the expert Indian farmer persona prompt
+            farming_prompt = f"""You are "Krishi Mitra" (कृषि मित्र) — a wise, experienced Indian agricultural expert who speaks like a trusted village elder and farming doctor. You have 30+ years of practical farming experience across India.
+
+Your personality:
+- Speak warmly and practically, like a knowledgeable farmer friend
+- Use simple, easy-to-understand language (avoid heavy technical jargon)
+- Give specific, actionable advice with exact quantities, timings, and product names
+- Prioritize low-cost, locally available solutions first, then chemical options
+- Always consider Indian farming conditions (climate, soil types, available resources)
+- Include safety warnings when discussing chemicals/pesticides
+
+Response format:
+- Keep responses concise but complete (2-4 short paragraphs + bullet points)
+- Use relevant emojis (🌾 🌱 💧 🐄 etc.) to make it visually friendly
+- Include a step-by-step action plan when the question involves "how to"
+- Mention approximate costs in ₹ where relevant
+- Suggest both organic/natural AND chemical solutions when applicable
+- Reference Indian seasons (Kharif, Rabi, Zaid) and local crop calendars
+
+CRITICAL: Write your ENTIRE response in {lang_name} language ONLY. Every single word must be in {lang_name}.
+
+Farmer's question: {message}
+
+Provide expert farming advice in {lang_name}:"""
 
         # Try native Gemini client first
+        native_error = None
         if gemini_model is not None:
             try:
                 response = gemini_model.generate_content(farming_prompt)
                 if response and getattr(response, 'text', None):
                     print(f" Got response from native Gemini client")
                     return response.text.strip()
+                else:
+                    native_error = "Response had no text content"
+                    print(f" Native client returned empty response")
             except Exception as e:
+                native_error = str(e)
                 print(f" Error using google.generativeai model: {e}")
-                raise RuntimeError(f"Gemini native client failed: {e}")
 
-        # Try REST API if native client is unavailable
+        # Try REST API as fallback (ALWAYS try this if native failed)
         if GEMINI_API_KEY and GEMINI_API_KEY != '':
             try:
                 print(f" Attempting Gemini REST API call...")
                 rest_response = call_gemini_rest(farming_prompt, language)
-                print(f" Got response from Gemini REST API")
-                return rest_response
+                if rest_response and rest_response.strip():
+                    print(f" Got response from Gemini REST API")
+                    return rest_response
             except Exception as e:
-                print(f" Gemini REST call failed: {e}")
-                raise RuntimeError(f"Gemini REST API failed: {e}")
+                print(f" Gemini REST call also failed: {e}")
+                raise RuntimeError(f"Both Gemini APIs failed. Native: {native_error}, REST: {e}")
 
         # If both fail, raise error
-        raise RuntimeError("Gemini API is not available. No response can be generated.")
+        raise RuntimeError(f"Gemini API is not available. Native error: {native_error}")
 
 # Initialize Farming AI
 farming_ai = FarmingAI()
@@ -1410,7 +1543,10 @@ def chat():
             'hi': 'Hindi (हिंदी)', 
             'mr': 'Marathi (मराठी)',
             'pa': 'Punjabi (ਪੰਜਾਬੀ)',
-            'ml': 'Malayalam (മലയാളം)'
+            'ml': 'Malayalam (മലയാളം)',
+            'ta': 'Tamil (தமிழ்)',
+            'te': 'Telugu (తెలుగు)',
+            'kn': 'Kannada (ಕನ್ನಡ)'
         }
         lang_name = language_names.get(user_language, 'English')
         
@@ -1492,7 +1628,7 @@ Keep it brief but actionable. Write ONLY in {lang_name}."""
             # Insert chat record
             chat_insert_query = """
                 INSERT INTO Chats (UserID, UserMessage, AIResponse, Language, HasImages, DetectedDiseases, Timestamp, SessionID)
-                VALUES (?, ?, ?, ?, ?, ?, GETDATE(), ?)
+                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
             """
             chat_params = (
                 user_id,
@@ -1528,11 +1664,12 @@ def get_chat_history():
     try:
         # Get chat history with SQL query
         query = """
-            SELECT TOP 50 c.ID, c.UserMessage, c.AIResponse, c.Language, c.Timestamp
+            SELECT c.ID, c.UserMessage, c.AIResponse, c.Language, c.Timestamp
             FROM Chats c
             INNER JOIN Users u ON c.UserID = u.UserID
             WHERE u.Email = ?
             ORDER BY c.Timestamp DESC
+            LIMIT 50
         """
         rows = execute_query(query, [user_email], fetch=True)
         
@@ -1858,7 +1995,9 @@ def weather_page():
                 }
         except:
             pass
-    return render_template('weather.html', user=user)
+    return render_template('weather.html', user=user,
+                           lang=get_user_language(),
+                           translations=translations.get(get_user_language(), {}))
 
 @app.route('/dashboard')
 def dashboard_page():
@@ -1879,7 +2018,9 @@ def dashboard_page():
             pass
     if not user:
         return redirect(url_for('login'))
-    return render_template('dashboard.html', user=user)
+    return render_template('dashboard.html', user=user,
+                           lang=get_user_language(),
+                           translations=translations.get(get_user_language(), {}))
 
 # ----------------------
 # Farmer Services API Routes
@@ -2091,7 +2232,9 @@ def signup():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirmPassword', '')
-        language_preference = request.form.get('languagePreference', 'english')
+        language_preference = request.form.get('languagePreference', 'en')
+        # Normalize to 2-letter code
+        language_preference = convert_language_code(language_preference)
         newsletter = request.form.get('newsletter') == 'on'
         location = request.form.get('location', '').strip()
         
@@ -2123,7 +2266,7 @@ def signup():
         # Insert new user
         insert_query = """
             INSERT INTO Users (FullName, Email, PasswordHash, PreferredLanguage, Location, Role, CreatedAt)
-            VALUES (?, ?, ?, ?, ?, 'Farmer', GETDATE())
+            VALUES (?, ?, ?, ?, ?, 'Farmer', NOW())
         """
         params = (full_name, email, hashed_password, language_preference, location)
         
@@ -2184,19 +2327,9 @@ def login():
             session['user_email'] = user_email
             session['language'] = preferred_language
             
-            # Update last login - first ensure column exists, then update
+            # Update last login timestamp
             try:
-                # Check if LastLogin column exists, add if needed
-                check_column = """
-                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'LastLogin')
-                    BEGIN
-                        ALTER TABLE Users ADD LastLogin DATETIME
-                    END
-                """
-                execute_query(check_column)
-                
-                # Now update the LastLogin value
-                update_login = "UPDATE Users SET LastLogin = GETDATE() WHERE Email = ?"
+                update_login = "UPDATE Users SET LastLogin = NOW() WHERE Email = ?"
                 execute_query(update_login, [email])
             except Exception as e:
                 print(f"Could not update LastLogin: {e}")
@@ -2225,7 +2358,10 @@ def logout():
 @app.route('/forgot-password')
 def forgot_password_page():
     """Render the OTP-based forgot password page."""
-    return render_template('forgot_password.html')
+    lang_code = get_user_language()
+    return render_template('forgot_password.html',
+                           lang=lang_code,
+                           translations=translations.get(lang_code, {}))
 
 
 def _send_otp_email(recipient_email, otp_code, user_name='Farmer'):
@@ -2457,19 +2593,20 @@ def reset_password():
 @app.route('/change-language/<language>')
 def change_language(language):
     lang_code = convert_language_code(language)
-    session['language'] = language
+    # Always store normalized 2-letter code
+    session['language'] = lang_code
     
     if 'user_email' in session:
         try:
             update_query = "UPDATE Users SET PreferredLanguage = ? WHERE Email = ?"
-            execute_query(update_query, [language, session['user_email']])
-            print(f" Updated user language preference to: {language}")
+            execute_query(update_query, [lang_code, session['user_email']])
+            print(f" Updated user language preference to: {lang_code}")
         except Exception as e:
             print(f" Error updating user language: {e}")
     
     # Check if it's an AJAX request
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.accept_json:
-        return jsonify({'success': True, 'language': language, 'lang_code': lang_code})
+        return jsonify({'success': True, 'language': lang_code, 'lang_code': lang_code})
     
     return redirect(request.referrer or url_for('home'))
 
@@ -3313,5 +3450,6 @@ def get_voice_commands():
 
 
 if __name__ == '__main__':
-    # Run without the Werkzeug reloader to avoid Anaconda/google-api-core conflict on Windows
-    app.run(debug=True, host='127.0.0.1', port=5000, use_reloader=False)
+    # Railway sets PORT env var; fallback to 5000 for local dev
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port, use_reloader=False)

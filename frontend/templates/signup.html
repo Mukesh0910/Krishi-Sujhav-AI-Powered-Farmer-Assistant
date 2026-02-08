@@ -46,7 +46,7 @@
       <form class="space-y-6" action="{{ url_for('signup') }}" method="POST" id="signupForm">
         <!-- Language Preference -->
         <div>
-          <label for="languagePreference" class="block text-sm font-medium text-slate-700 mb-2">Language Preference</label>
+          <label for="languagePreference" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="language_preference">Language Preference</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,24 +55,23 @@
             </div>
             <select id="languagePreference" name="languagePreference" required 
                     class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent bg-white"
-                    onchange="changeLanguage(this.value)">
-              <option value="">Select your preferred language</option>
-              <option value="hindi">Hindi (हिन्दी)</option>
-              <option value="english">English</option>
-              <option value="punjabi">Punjabi (ਪੰਜਾਬੀ)</option>
-              <option value="marathi">Marathi (मराठी)</option>
-              <option value="malayalam">Malayalam (മലയാളം)</option>
-              <option value="tamil">Tamil (தமிழ்)</option>
-              <option value="telugu">Telugu (తెలుగు)</option>
-              <option value="kannada">Kannada (ಕನ್ನಡ)</option>
-              <option value="other">Other</option>
+                    onchange="changeGlobalLanguage(this.value)">
+              <option value="" data-i18n="select_language">Select your preferred language</option>
+              <option value="en">English</option>
+              <option value="hi">Hindi (हिन्दी)</option>
+              <option value="mr">Marathi (मराठी)</option>
+              <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+              <option value="ml">Malayalam (മലയാളം)</option>
+              <option value="ta">Tamil (தமிழ்)</option>
+              <option value="te">Telugu (తెలుగు)</option>
+              <option value="kn">Kannada (ಕನ್ನಡ)</option>
             </select>
           </div>
         </div>
 
         <!-- Full Name -->
         <div>
-          <label for="fullName" class="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
+          <label for="fullName" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="full_name">Full Name</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +86,7 @@
 
         <!-- Email Address -->
         <div>
-          <label for="email" class="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
+          <label for="email" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="email">Email Address</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +101,7 @@
 
         <!-- Location -->
         <div>
-          <label for="location" class="block text-sm font-medium text-slate-700 mb-2">Location (City/Village)</label>
+          <label for="location" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="location">Location (City/Village)</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,7 +117,7 @@
 
         <!-- Password -->
         <div>
-          <label for="password" class="block text-sm font-medium text-slate-700 mb-2">Password</label>
+          <label for="password" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="password">Password</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +132,7 @@
 
         <!-- Confirm Password -->
         <div>
-          <label for="confirmPassword" class="block text-sm font-medium text-slate-700 mb-2">Re-type Password</label>
+          <label for="confirmPassword" class="block text-sm font-medium text-slate-700 mb-2" data-i18n="confirm_password">Re-type Password</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,10 +151,10 @@
           <input id="terms" name="terms" type="checkbox" required 
                  class="h-4 w-4 text-accent focus:ring-accent border-slate-300 rounded">
           <label for="terms" class="ml-2 block text-sm text-slate-700">
-            I agree to the 
+            <span data-i18n="terms_agree">I agree to the 
             <a href="#" id="openTermsModal" class="font-medium text-accent hover:text-accent/80">Terms of Service</a> 
             and 
-            <a href="#" id="openPrivacyModal" class="font-medium text-accent hover:text-accent/80">Privacy Policy</a>
+            <a href="#" id="openPrivacyModal" class="font-medium text-accent hover:text-accent/80">Privacy Policy</a></span>
           </label>
         </div>
 
@@ -163,7 +162,7 @@
         <div class="flex items-center">
           <input id="newsletter" name="newsletter" type="checkbox" 
                  class="h-4 w-4 text-accent focus:ring-accent border-slate-300 rounded">
-          <label for="newsletter" class="ml-2 block text-sm text-slate-700">
+          <label for="newsletter" class="ml-2 block text-sm text-slate-700" data-i18n="newsletter">
             Subscribe to farming tips and updates
           </label>
         </div>
@@ -177,7 +176,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
               </svg>
             </span>
-            Create My Account
+            <span data-i18n="create_account">Create My Account</span>
           </button>
         </div>
       </form>
@@ -185,8 +184,8 @@
       <!-- Sign in link -->
       <div class="mt-6 text-center">
         <p class="text-sm text-slate-600">
-          Already have an account? 
-          <a href="{{ url_for('login') }}" class="font-medium text-accent hover:text-accent/80">
+          <span data-i18n="already_account">Already have an account?</span> 
+          <a href="{{ url_for('login') }}" class="font-medium text-accent hover:text-accent/80" data-i18n="sign_in_here">
             Sign in here
           </a>
         </p>
