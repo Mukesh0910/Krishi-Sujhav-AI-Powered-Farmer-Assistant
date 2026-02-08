@@ -142,6 +142,9 @@
       <header class="p-4 border-b border-slate-200 font-semibold flex items-center justify-between">
         <span>{{ translations.chat_history if translations and translations.chat_history else 'Chat History' }}</span>
         <div class="flex items-center gap-2">
+          <a href="/dashboard" class="text-green-600 hover:text-green-700 p-1.5 rounded-lg hover:bg-green-50 transition-colors" title="Farmer Dashboard">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          </a>
           <button id="newChatBtn" class="text-accent hover:text-accent/90 p-1.5 rounded-lg hover:bg-accent/10 transition-colors" title="{{ translations.new_chat if translations and translations.new_chat else 'New Chat' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -262,6 +265,9 @@
               <option value="mr" {{ 'selected' if lang == 'mr' else '' }}>मराठी</option>
               <option value="pa" {{ 'selected' if lang == 'pa' else '' }}>ਪੰਜਾਬੀ</option>
               <option value="ml" {{ 'selected' if lang == 'ml' else '' }}>മലയാളം</option>
+              <option value="ta" {{ 'selected' if lang == 'ta' else '' }}>தமிழ்</option>
+              <option value="te" {{ 'selected' if lang == 'te' else '' }}>తెలుగు</option>
+              <option value="kn" {{ 'selected' if lang == 'kn' else '' }}>ಕನ್ನಡ</option>
             </select>
           </div>
           <span class="text-sm text-slate-600" id="userGreeting">
