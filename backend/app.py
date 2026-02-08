@@ -51,7 +51,13 @@ except Exception as e:
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__, template_folder='../frontend/templates', static_folder='../frontend/static')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'frontend', 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'frontend', 'static')
+)
 
 # ========== SMTP Configuration ==========
 SMTP_EMAIL = os.getenv('SMTP_EMAIL', '')       # Your Gmail address
