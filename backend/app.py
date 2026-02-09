@@ -314,10 +314,13 @@ def get_user_sessions(user_email):
         
         return sessions
     except Exception as e:
-        print(f"Error getting user sessions: {e}")
+        print("❌ SQL ERROR FULL DETAILS:")
         import traceback
         traceback.print_exc()
-        return []
+        if conn:
+            conn.rollback()
+            conn.close()
+        raise e 
 
 # ----------------------
 # Gemini AI Setup
