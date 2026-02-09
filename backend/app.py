@@ -120,8 +120,10 @@ def init_db():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
+                full_name TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
+                language TEXT DEFAULT 'en',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -134,6 +136,7 @@ def init_db():
         print("Database init failed:", e)
 
 init_db()
+
 
 
 def execute_query(query, params=None, fetch=False):
