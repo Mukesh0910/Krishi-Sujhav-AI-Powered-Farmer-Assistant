@@ -110,6 +110,32 @@ def get_connection():
         print(f" Database connection failed: {e}")
         return None
 
+def init_db():
+    try:
+        conn = get_connection()
+        if conn is None:
+            raise Exception("No DB connection")
+
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Database initialized successfully")
+
+    except Exception as e:
+        print("Database init failed:", e)
+
+init_db()
+
+
 def execute_query(query, params=None, fetch=False):
     """Execute SQL query with optional parameters (PostgreSQL compatible).
     Converts ? placeholders to %s for psycopg2."""
