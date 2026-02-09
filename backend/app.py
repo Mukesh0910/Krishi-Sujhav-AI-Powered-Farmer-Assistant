@@ -51,7 +51,13 @@ except Exception as e:
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__, template_folder='../frontend/templates', static_folder='../frontend/static')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'frontend', 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'frontend', 'static')
+)
 
 # ========== SMTP Configuration ==========
 SMTP_EMAIL = os.getenv('SMTP_EMAIL', '')       # Your Gmail address
@@ -69,49 +75,38 @@ CORS(app)
 bcrypt = Bcrypt(app)
 
 # ----------------------
-# PostgreSQL Setup (Render.com / Production)
+# SQL Server Setup (Direct pyodbc)
 # ----------------------
-import psycopg2
-import psycopg2.extras
-from urllib.parse import urlparse
+import pyodbc
 
 def get_connection():
-    """Get PostgreSQL connection using DATABASE_URL (Render) or individual env vars"""
+    """Get direct SQL Server connection"""
     try:
-        database_url = os.getenv('DATABASE_URL', '')
+        # Build connection string
+        server = os.getenv('SQL_SERVER', 'LAPTOP-MUKESH\\SQLEXPRESS')
+        database = os.getenv('SQL_DATABASE', 'farmDB')
+        trusted = os.getenv('TRUSTED_CONNECTION', 'YES')
+        driver = os.getenv('SQL_DRIVER', 'ODBC Driver 17 for SQL Server')
         
-        if database_url:
-            # Render provides DATABASE_URL (Internal URL for same-region services)
-            # Fix: Render gives postgres:// but psycopg2 needs postgresql://
-            if database_url.startswith('postgres://'):
-                database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            conn = psycopg2.connect(database_url)
+        if trusted.upper() == 'YES':
+            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection=yes;TrustServerCertificate=yes"
         else:
-            # Fallback to individual env vars (local dev)
-            conn = psycopg2.connect(
-                host=os.getenv('PG_HOST', 'localhost'),
-                port=os.getenv('PG_PORT', '5432'),
-                database=os.getenv('PG_DATABASE', 'farmdb'),
-                user=os.getenv('PG_USER', 'postgres'),
-                password=os.getenv('PG_PASSWORD', '')
-            )
+            username = os.getenv('SQL_USERNAME', '')
+            password = os.getenv('SQL_PASSWORD', '')
+            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};TrustServerCertificate=yes"
         
-        conn.autocommit = False
+        conn = pyodbc.connect(conn_str)
         return conn
     except Exception as e:
         print(f" Database connection failed: {e}")
         return None
 
 def execute_query(query, params=None, fetch=False):
-    """Execute SQL query with optional parameters (PostgreSQL compatible).
-    Converts ? placeholders to %s for psycopg2."""
+    """Execute SQL query with optional parameters"""
     conn = get_connection()
     if not conn:
         return None
     try:
-        # Convert SQL Server style ? placeholders to PostgreSQL %s
-        query = query.replace('?', '%s')
-        
         cursor = conn.cursor()
         if params:
             cursor.execute(query, params)
@@ -133,92 +128,20 @@ def execute_query(query, params=None, fetch=False):
         import traceback
         traceback.print_exc()
         if conn:
-            try:
-                conn.rollback()
-            except:
-                pass
             conn.close()
         return None
-
-# Initialize database tables (PostgreSQL)
-def init_database():
-    """Create tables if they don't exist (PostgreSQL)"""
-    conn = get_connection()
-    if not conn:
-        print(" Cannot initialize database — no connection")
-        return
-    try:
-        cursor = conn.cursor()
-        
-        # Create Users table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS Users (
-                UserID SERIAL PRIMARY KEY,
-                FullName VARCHAR(200) NOT NULL,
-                Email VARCHAR(200) UNIQUE NOT NULL,
-                PasswordHash VARCHAR(500) NOT NULL,
-                PreferredLanguage VARCHAR(10) DEFAULT 'en',
-                Location VARCHAR(200),
-                Role VARCHAR(50) DEFAULT 'Farmer',
-                CreatedAt TIMESTAMP DEFAULT NOW(),
-                LastLogin TIMESTAMP
-            )
-        """)
-        
-        # Create Chats table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS Chats (
-                ID SERIAL PRIMARY KEY,
-                UserID INTEGER REFERENCES Users(UserID) ON DELETE CASCADE,
-                UserMessage TEXT,
-                AIResponse TEXT,
-                Language VARCHAR(10) DEFAULT 'en',
-                HasImages INTEGER DEFAULT 0,
-                DetectedDiseases TEXT,
-                Timestamp TIMESTAMP DEFAULT NOW(),
-                SessionID VARCHAR(100)
-            )
-        """)
-        
-        # Create indexes for performance
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_chats_userid ON Chats(UserID)
-        """)
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_chats_sessionid ON Chats(SessionID)
-        """)
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_users_email ON Users(Email)
-        """)
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print(" Database tables initialized (PostgreSQL)")
-    except Exception as e:
-        print(f" Database init error: {e}")
-        import traceback
-        traceback.print_exc()
-        if conn:
-            try:
-                conn.rollback()
-            except:
-                pass
-            conn.close()
 
 # Test database connection on startup
 try:
     test_conn = get_connection()
     if test_conn:
         test_conn.close()
-        print(" Connected to PostgreSQL successfully!")
-        db_url = os.getenv('DATABASE_URL', 'local')
-        print(f"   Source: {'Render DATABASE_URL' if db_url != 'local' else 'Local PostgreSQL'}")
-        print("   Using psycopg2 driver")
-        # Initialize tables
-        init_database()
+        print(" Connected to SQL Server successfully!")
+        print(f"   Server: {os.getenv('SQL_SERVER', 'Not configured')}")
+        print(f"   Database: {os.getenv('SQL_DATABASE', 'Not configured')}")
+        print("   Using direct pyodbc connection")
     else:
-        print(" Failed to connect to PostgreSQL")
+        print(" Failed to connect to SQL Server")
 except Exception as e:
     print(f" Database connection test failed: {e}")
 
@@ -245,7 +168,7 @@ def calculate_session_size(session_id):
     """Calculate total size of messages in a session (in MB)"""
     try:
         query = """
-            SELECT COALESCE(SUM(LENGTH(UserMessage) + LENGTH(AIResponse)), 0) / 1024.0 / 1024.0 as SizeMB
+            SELECT SUM(DATALENGTH(UserMessage) + DATALENGTH(AIResponse)) / 1024.0 / 1024.0 as SizeMB
             FROM Chats 
             WHERE SessionID = ?
         """
@@ -281,7 +204,7 @@ def get_user_sessions(user_email):
                 SessionID,
                 MIN(Timestamp) as FirstMessageTime,
                 COUNT(*) as MessageCount,
-                (SELECT UserMessage FROM Chats WHERE SessionID = c.SessionID ORDER BY Timestamp ASC LIMIT 1) as FirstMessage
+                (SELECT TOP 1 UserMessage FROM Chats WHERE SessionID = c.SessionID ORDER BY Timestamp ASC) as FirstMessage
             FROM Chats c
             WHERE UserID = ? AND SessionID IS NOT NULL
             GROUP BY SessionID
@@ -1628,7 +1551,7 @@ Keep it brief but actionable. Write ONLY in {lang_name}."""
             # Insert chat record
             chat_insert_query = """
                 INSERT INTO Chats (UserID, UserMessage, AIResponse, Language, HasImages, DetectedDiseases, Timestamp, SessionID)
-                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
+                VALUES (?, ?, ?, ?, ?, ?, GETDATE(), ?)
             """
             chat_params = (
                 user_id,
@@ -1664,12 +1587,11 @@ def get_chat_history():
     try:
         # Get chat history with SQL query
         query = """
-            SELECT c.ID, c.UserMessage, c.AIResponse, c.Language, c.Timestamp
+            SELECT TOP 50 c.ID, c.UserMessage, c.AIResponse, c.Language, c.Timestamp
             FROM Chats c
             INNER JOIN Users u ON c.UserID = u.UserID
             WHERE u.Email = ?
             ORDER BY c.Timestamp DESC
-            LIMIT 50
         """
         rows = execute_query(query, [user_email], fetch=True)
         
@@ -2266,7 +2188,7 @@ def signup():
         # Insert new user
         insert_query = """
             INSERT INTO Users (FullName, Email, PasswordHash, PreferredLanguage, Location, Role, CreatedAt)
-            VALUES (?, ?, ?, ?, ?, 'Farmer', NOW())
+            VALUES (?, ?, ?, ?, ?, 'Farmer', GETDATE())
         """
         params = (full_name, email, hashed_password, language_preference, location)
         
@@ -2329,7 +2251,7 @@ def login():
             
             # Update last login timestamp
             try:
-                update_login = "UPDATE Users SET LastLogin = NOW() WHERE Email = ?"
+                update_login = "UPDATE Users SET LastLogin = GETDATE() WHERE Email = ?"
                 execute_query(update_login, [email])
             except Exception as e:
                 print(f"Could not update LastLogin: {e}")
@@ -3450,6 +3372,5 @@ def get_voice_commands():
 
 
 if __name__ == '__main__':
-    # Railway sets PORT env var; fallback to 5000 for local dev
-    port = int(os.getenv('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port, use_reloader=False)
+    # Run without the Werkzeug reloader to avoid Anaconda/google-api-core conflict on Windows
+    app.run(debug=True, host='127.0.0.1', port=5000, use_reloader=False)

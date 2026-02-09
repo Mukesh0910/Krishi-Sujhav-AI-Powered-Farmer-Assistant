@@ -80,7 +80,17 @@
     "remember_me": "Remember me",
     "forgot_password": "Forgot your password?",
     "location": "Location (City/Village)",
-    "location_placeholder": "Enter your city or village"
+    "location_placeholder": "Enter your city or village",
+    "welcome_hero_title": "Welcome to Krishi Sujhav",
+    "welcome_hero_subtitle": "Your AI-powered farming companion. Ask me anything!",
+    "card_crop_advice": "Crop Advice",
+    "card_crop_advice_q": "What crops should I grow this season?",
+    "card_pest_control": "Pest Control",
+    "card_pest_control_q": "How to protect crops from pests?",
+    "card_market_prices": "Market Prices",
+    "card_market_prices_q": "Current market price of wheat?",
+    "card_weather": "Weather",
+    "card_weather_q": "Weather forecast for this week?"
   },
   "hi": {
     "site_title": "किसान सहायक",
@@ -163,7 +173,17 @@
     "remember_me": "मुझे याद रखें",
     "forgot_password": "पासवर्ड भूल गए?",
     "location": "स्थान (शहर/गांव)",
-    "location_placeholder": "अपना शहर या गांव दर्ज करें"
+    "location_placeholder": "अपना शहर या गांव दर्ज करें",
+    "welcome_hero_title": "कृषि सुझाव में आपका स्वागत है",
+    "welcome_hero_subtitle": "आपका AI-संचालित खेती साथी। मुझसे कुछ भी पूछें!",
+    "card_crop_advice": "फसल सलाह",
+    "card_crop_advice_q": "इस सीजन में मुझे कौन सी फसल उगानी चाहिए?",
+    "card_pest_control": "कीट नियंत्रण",
+    "card_pest_control_q": "फसलों को कीटों से कैसे बचाएं?",
+    "card_market_prices": "बाजार भाव",
+    "card_market_prices_q": "गेहूं का वर्तमान बाजार भाव?",
+    "card_weather": "मौसम",
+    "card_weather_q": "इस हफ्ते का मौसम पूर्वानुमान?"
   },
   "mr": {
     "site_title": "शेतकरी सहाय्यक",
@@ -246,7 +266,17 @@
     "remember_me": "मला लक्षात ठेवा",
     "forgot_password": "पासवर्ड विसरलात?",
     "location": "स्थान (शहर/गाव)",
-    "location_placeholder": "तुमचे शहर किंवा गाव टाका"
+    "location_placeholder": "तुमचे शहर किंवा गाव टाका",
+    "welcome_hero_title": "कृषी सुझावमध्ये आपले स्वागत आहे",
+    "welcome_hero_subtitle": "तुमचा AI-चालित शेती साथीदार. मला काहीही विचारा!",
+    "card_crop_advice": "पीक सल्ला",
+    "card_crop_advice_q": "या हंगामात मी कोणते पीक घ्यावे?",
+    "card_pest_control": "कीड नियंत्रण",
+    "card_pest_control_q": "पिकांचे कीडींपासून संरक्षण कसे करावे?",
+    "card_market_prices": "बाजार भाव",
+    "card_market_prices_q": "गव्हाचा सध्याचा बाजार भाव?",
+    "card_weather": "हवामान",
+    "card_weather_q": "या आठवड्याचा हवामान अंदाज?"
   },
   "pa": {
     "site_title": "ਕਿਸਾਨ ਸਹਾਇਕ",
@@ -329,7 +359,17 @@
     "remember_me": "ਮੈਨੂੰ ਯਾਦ ਰੱਖੋ",
     "forgot_password": "ਪਾਸਵਰਡ ਭੁੱਲ ਗਏ?",
     "location": "ਸਥਾਨ (ਸ਼ਹਿਰ/ਪਿੰਡ)",
-    "location_placeholder": "ਆਪਣਾ ਸ਼ਹਿਰ ਜਾਂ ਪਿੰਡ ਦਰਜ ਕਰੋ"
+    "location_placeholder": "ਆਪਣਾ ਸ਼ਹਿਰ ਜਾਂ ਪਿੰਡ ਦਰਜ ਕਰੋ",
+    "welcome_hero_title": "ਕ੍ਰਿਸ਼ੀ ਸੁਝਾਵ ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ",
+    "welcome_hero_subtitle": "ਤੁਹਾਡਾ AI-ਸੰਚਾਲਿਤ ਖੇਤੀ ਸਾਥੀ। ਮੈਨੂੰ ਕੁਝ ਵੀ ਪੁੱਛੋ!",
+    "card_crop_advice": "ਫਸਲ ਸਲਾਹ",
+    "card_crop_advice_q": "ਇਸ ਸੀਜ਼ਨ ਵਿੱਚ ਮੈਨੂੰ ਕਿਹੜੀ ਫਸਲ ਉਗਾਉਣੀ ਚਾਹੀਦੀ ਹੈ?",
+    "card_pest_control": "ਕੀਟ ਨਿਯੰਤਰਣ",
+    "card_pest_control_q": "ਫਸਲਾਂ ਨੂੰ ਕੀੜਿਆਂ ਤੋਂ ਕਿਵੇਂ ਬਚਾਉਣਾ ਹੈ?",
+    "card_market_prices": "ਮੰਡੀ ਭਾਅ",
+    "card_market_prices_q": "ਕਣਕ ਦਾ ਮੌਜੂਦਾ ਮੰਡੀ ਭਾਅ?",
+    "card_weather": "ਮੌਸਮ",
+    "card_weather_q": "ਇਸ ਹਫ਼ਤੇ ਦਾ ਮੌਸਮ ਪੂਰਵ ਅਨੁਮਾਨ?"
   },
   "ml": {
     "site_title": "കർഷക സഹായകൻ",
@@ -412,7 +452,17 @@
     "remember_me": "എന്നെ ഓർക്കുക",
     "forgot_password": "പാസ്‌വേഡ് മറന്നോ?",
     "location": "സ്ഥലം (നഗരം/ഗ്രാമം)",
-    "location_placeholder": "നിങ്ങളുടെ നഗരം അല്ലെങ്കിൽ ഗ്രാമം നൽകുക"
+    "location_placeholder": "നിങ്ങളുടെ നഗരം അല്ലെങ്കിൽ ഗ്രാമം നൽകുക",
+    "welcome_hero_title": "കൃഷി സുജാവിലേക്ക് സ്വാഗതം",
+    "welcome_hero_subtitle": "നിങ്ങളുടെ AI-പവർഡ് കൃഷി സഹായി. എന്തും ചോദിക്കൂ!",
+    "card_crop_advice": "വിള ഉപദേശം",
+    "card_crop_advice_q": "ഈ സീസണിൽ ഞാൻ ഏത് വിള കൃഷി ചെയ്യണം?",
+    "card_pest_control": "കീട നിയന്ത്രണം",
+    "card_pest_control_q": "വിളകളെ കീടങ്ങളിൽ നിന്ന് എങ്ങനെ സംരക്ഷിക്കാം?",
+    "card_market_prices": "വിപണി വില",
+    "card_market_prices_q": "ഗോതമ്പിന്റെ നിലവിലെ വിപണി വില?",
+    "card_weather": "കാലാവസ്ഥ",
+    "card_weather_q": "ഈ ആഴ്ചത്തെ കാലാവസ്ഥാ പ്രവചനം?"
   },
   "ta": {
     "site_title": "விவசாயி உதவியாளர்",
@@ -495,7 +545,17 @@
     "remember_me": "என்னை நினைவில் கொள்",
     "forgot_password": "கடவுச்சொல்லை மறந்துவிட்டீர்களா?",
     "location": "இடம் (நகரம்/கிராமம்)",
-    "location_placeholder": "உங்கள் நகரம் அல்லது கிராமத்தை உள்ளிடவும்"
+    "location_placeholder": "உங்கள் நகரம் அல்லது கிராமத்தை உள்ளிடவும்",
+    "welcome_hero_title": "கிருஷி சுஜாவ் உங்களை வரவேற்கிறது",
+    "welcome_hero_subtitle": "உங்கள் AI-இயக்கப்படும் விவசாய துணைவர். எதையும் கேளுங்கள்!",
+    "card_crop_advice": "பயிர் ஆலோசனை",
+    "card_crop_advice_q": "இந்த பருவத்தில் நான் என்ன பயிர் பயிரிட வேண்டும்?",
+    "card_pest_control": "பூச்சி கட்டுப்பாடு",
+    "card_pest_control_q": "பயிர்களை பூச்சிகளிலிருந்து எப்படி பாதுகாப்பது?",
+    "card_market_prices": "சந்தை விலை",
+    "card_market_prices_q": "கோதுமையின் தற்போதைய சந்தை விலை?",
+    "card_weather": "வானிலை",
+    "card_weather_q": "இந்த வாரத்திற்கான வானிலை முன்னறிவிப்பு?"
   },
   "te": {
     "site_title": "రైతు సహాయకుడు",
@@ -578,7 +638,17 @@
     "remember_me": "నన్ను గుర్తుంచుకో",
     "forgot_password": "పాస్‌వర్డ్ మర్చిపోయారా?",
     "location": "స్థానం (నగరం/గ్రామం)",
-    "location_placeholder": "మీ నగరం లేదా గ్రామాన్ని నమోదు చేయండి"
+    "location_placeholder": "మీ నగరం లేదా గ్రామాన్ని నమోదు చేయండి",
+    "welcome_hero_title": "కృషి సుజావ్‌కు స్వాగతం",
+    "welcome_hero_subtitle": "మీ AI-ఆధారిత వ్యవసాయ సహచరుడు. ఏదైనా అడగండి!",
+    "card_crop_advice": "పంట సలహా",
+    "card_crop_advice_q": "ఈ సీజన్‌లో నేను ఏ పంట పండించాలి?",
+    "card_pest_control": "చీడ నియంత్రణ",
+    "card_pest_control_q": "పంటలను చీడపీడల నుండి ఎలా రక్షించాలి?",
+    "card_market_prices": "మార్కెట్ ధరలు",
+    "card_market_prices_q": "గోధుమ ప్రస్తుత మార్కెట్ ధర?",
+    "card_weather": "వాతావరణం",
+    "card_weather_q": "ఈ వారం వాతావరణ సూచన?"
   },
   "kn": {
     "site_title": "ರೈತ ಸಹಾಯಕ",
@@ -653,7 +723,6 @@
     "processing": "ಪ್ರಕ್ರಿಯೆ ಆಗುತ್ತಿದೆ...",
     "selected_files": "ಆಯ್ಕೆ ಮಾಡಿದ ಫೈಲ್‌ಗಳು",
     "remove": "ತೆಗೆದುಹಾಕಿ",
-    "typing_indicator": "ಟೈಪ್ ಮಾಡುತ್ತಿದೆ...",
     "send": "ಕಳುಹಿಸಿ",
     "farmer_dashboard": "ರೈತ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
     "weather_forecast": "ಹವಾಮಾನ ಮುನ್ಸೂಚನೆ",
@@ -662,6 +731,16 @@
     "remember_me": "ನನ್ನನ್ನು ನೆನಪಿಡಿ",
     "forgot_password": "ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿದ್ದೀರಾ?",
     "location": "ಸ್ಥಳ (ನಗರ/ಹಳ್ಳಿ)",
-    "location_placeholder": "ನಿಮ್ಮ ನಗರ ಅಥವಾ ಹಳ್ಳಿಯನ್ನು ನಮೂದಿಸಿ"
+    "location_placeholder": "ನಿಮ್ಮ ನಗರ ಅಥವಾ ಹಳ್ಳಿಯನ್ನು ನಮೂದಿಸಿ",
+    "welcome_hero_title": "ಕೃಷಿ ಸುಜಾವ್‌ಗೆ ಸ್ವಾಗತ",
+    "welcome_hero_subtitle": "ನಿಮ್ಮ AI-ಚಾಲಿತ ಕೃಷಿ ಸಂಗಾತಿ. ಏನಾದರೂ ಕೇಳಿ!",
+    "card_crop_advice": "ಬೆಳೆ ಸಲಹೆ",
+    "card_crop_advice_q": "ಈ ಋತುವಿನಲ್ಲಿ ನಾನು ಯಾವ ಬೆಳೆ ಬೆಳೆಯಬೇಕು?",
+    "card_pest_control": "ಕೀಟ ನಿಯಂತ್ರಣ",
+    "card_pest_control_q": "ಬೆಳೆಗಳನ್ನು ಕೀಟಗಳಿಂದ ಹೇಗೆ ರಕ್ಷಿಸುವುದು?",
+    "card_market_prices": "ಮಾರುಕಟ್ಟೆ ಬೆಲೆ",
+    "card_market_prices_q": "ಗೋಧಿಯ ಪ್ರಸ್ತುತ ಮಾರುಕಟ್ಟೆ ಬೆಲೆ?",
+    "card_weather": "ಹವಾಮಾನ",
+    "card_weather_q": "ಈ ವಾರದ ಹವಾಮಾನ ಮುನ್ಸೂಚನೆ?"
   }
 }

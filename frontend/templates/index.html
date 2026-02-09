@@ -939,42 +939,56 @@
     // Add welcome message with quick-action cards
     function addWelcomeMessage() {
       const chatMessages = document.getElementById('chatMessages');
+      // Get translations — from window.APP_TRANSLATIONS (set by language.js) or Jinja fallback
+      const t = window.APP_TRANSLATIONS || {};
+      const heroTitle = t.welcome_hero_title || '{{ translations.welcome_hero_title if translations and translations.welcome_hero_title else "Welcome to Krishi Sujhav" }}';
+      const heroSubtitle = t.welcome_hero_subtitle || '{{ translations.welcome_hero_subtitle if translations and translations.welcome_hero_subtitle else "Your AI-powered farming companion. Ask me anything!" }}';
+      const cropAdvice = t.card_crop_advice || '{{ translations.card_crop_advice if translations and translations.card_crop_advice else "Crop Advice" }}';
+      const cropAdviceQ = t.card_crop_advice_q || '{{ translations.card_crop_advice_q if translations and translations.card_crop_advice_q else "What crops should I grow this season?" }}';
+      const pestControl = t.card_pest_control || '{{ translations.card_pest_control if translations and translations.card_pest_control else "Pest Control" }}';
+      const pestControlQ = t.card_pest_control_q || '{{ translations.card_pest_control_q if translations and translations.card_pest_control_q else "How to protect crops from pests?" }}';
+      const marketPrices = t.card_market_prices || '{{ translations.card_market_prices if translations and translations.card_market_prices else "Market Prices" }}';
+      const marketPricesQ = t.card_market_prices_q || '{{ translations.card_market_prices_q if translations and translations.card_market_prices_q else "Current market price of wheat?" }}';
+      const weather = t.card_weather || '{{ translations.card_weather if translations and translations.card_weather else "Weather" }}';
+      const weatherQ = t.card_weather_q || '{{ translations.card_weather_q if translations and translations.card_weather_q else "Weather forecast for this week?" }}';
+
       const welcome = document.createElement('div');
       welcome.className = 'text-center py-8 max-w-2xl mx-auto w-full';
+      welcome.id = 'welcomeBlock';
       welcome.innerHTML = `
         <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-accent/20 to-emerald-100 rounded-full mb-4 shadow-lg">
           <span class="text-4xl">🌾</span>
         </div>
-        <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-700 to-accent bg-clip-text text-transparent mb-2">Welcome to Krishi Sujhav</h2>
-        <p class="text-slate-500 mb-8">Your AI-powered farming companion. Ask me anything!</p>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-700 to-accent bg-clip-text text-transparent mb-2">${heroTitle}</h2>
+        <p class="text-slate-500 mb-8">${heroSubtitle}</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-          <div onclick="document.getElementById('chatInput').value='What crops should I grow this season?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+          <div onclick="document.getElementById('chatInput').value='${cropAdviceQ}';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
             <div class="flex items-center gap-2 mb-1">
               <span class="text-lg">🌱</span>
-              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Crop Advice</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">${cropAdvice}</span>
             </div>
-            <p class="text-xs text-slate-400">What crops should I grow this season?</p>
+            <p class="text-xs text-slate-400">${cropAdviceQ}</p>
           </div>
-          <div onclick="document.getElementById('chatInput').value='How to protect crops from pests?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+          <div onclick="document.getElementById('chatInput').value='${pestControlQ}';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
             <div class="flex items-center gap-2 mb-1">
               <span class="text-lg">🛡️</span>
-              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Pest Control</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">${pestControl}</span>
             </div>
-            <p class="text-xs text-slate-400">How to protect crops from pests?</p>
+            <p class="text-xs text-slate-400">${pestControlQ}</p>
           </div>
-          <div onclick="document.getElementById('chatInput').value='What is the current market price of wheat?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+          <div onclick="document.getElementById('chatInput').value='${marketPricesQ}';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
             <div class="flex items-center gap-2 mb-1">
               <span class="text-lg">📊</span>
-              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Market Prices</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">${marketPrices}</span>
             </div>
-            <p class="text-xs text-slate-400">Current market price of wheat?</p>
+            <p class="text-xs text-slate-400">${marketPricesQ}</p>
           </div>
-          <div onclick="document.getElementById('chatInput').value='How is the weather forecast for this week?';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
+          <div onclick="document.getElementById('chatInput').value='${weatherQ}';document.getElementById('chatForm').dispatchEvent(new Event('submit'));" class="p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 hover:border-accent/40 hover:shadow-lg cursor-pointer transition-all group">
             <div class="flex items-center gap-2 mb-1">
               <span class="text-lg">🌤️</span>
-              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">Weather</span>
+              <span class="font-medium text-slate-700 text-sm group-hover:text-accent transition-colors">${weather}</span>
             </div>
-            <p class="text-xs text-slate-400">Weather forecast for this week?</p>
+            <p class="text-xs text-slate-400">${weatherQ}</p>
           </div>
         </div>
       `;

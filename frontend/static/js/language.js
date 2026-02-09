@@ -191,6 +191,13 @@ function updateUILanguage(language) {
   window.APP_LANG = language;
   window.APP_TRANSLATIONS = t;
   
+  // Re-render welcome block if it exists (so language change updates it)
+  const existingWelcome = document.getElementById('welcomeBlock');
+  if (existingWelcome && typeof addWelcomeMessage === 'function') {
+    existingWelcome.remove();
+    addWelcomeMessage();
+  }
+  
   console.log('UI updated for language:', language);
 }
 
