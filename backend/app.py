@@ -49,7 +49,7 @@ except Exception as e:
     print(f"  Farmer services not available: {e}")
 
 # Load environment variables
-load_dotenv()
+#load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -83,59 +83,22 @@ import psycopg2.extras
 from urllib.parse import urlparse
 
 def get_connection():
-    """Get PostgreSQL connection using DATABASE_URL (Render) or individual env vars"""
     try:
-        database_url = os.getenv('DATABASE_URL', '')
-        
-        if database_url:
-            # Render provides DATABASE_URL (Internal URL for same-region services)
-            # Fix: Render gives postgres:// but psycopg2 needs postgresql://
-            if database_url.startswith('postgres://'):
-                database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            conn = psycopg2.connect(database_url)
-        else:
-            # Fallback to individual env vars (local dev)
-            conn = psycopg2.connect(
-                host=os.getenv("PGHOST"),
-                port=os.getenv("PGPORT"),
-                database=os.getenv("PGDATABASE"),
-                user=os.getenv("PGUSER"),
-                password=os.getenv("PGPASSWORD"),
-                sslmode="require"
-            )
-        
+        database_url = os.getenv("DATABASE_URL")
+
+        if not database_url:
+            raise RuntimeError("DATABASE_URL is not set in environment variables")
+
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+        conn = psycopg2.connect(database_url, sslmode="require")
         conn.autocommit = False
         return conn
+
     except Exception as e:
-        print(f" Database connection failed: {e}")
+        print("❌ Database connection failed:", e)
         return None
-
-def init_db():
-    try:
-        conn = get_connection()
-        if conn is None:
-            raise Exception("No DB connection")
-
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                full_name TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                language TEXT DEFAULT 'en',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("Database initialized successfully")
-
-    except Exception as e:
-        print("Database init failed:", e)
-
-init_db()
 
 
 
