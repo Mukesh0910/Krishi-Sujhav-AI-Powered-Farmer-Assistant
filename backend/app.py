@@ -59,6 +59,7 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, 'frontend', 'static')
 )
 
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 # ========== SMTP Configuration ==========
 SMTP_EMAIL = os.getenv('SMTP_EMAIL', '')       # Your Gmail address
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '') # Gmail App Password (NOT your regular password)
