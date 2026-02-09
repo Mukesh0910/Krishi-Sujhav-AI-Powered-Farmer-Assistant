@@ -96,11 +96,12 @@ def get_connection():
         else:
             # Fallback to individual env vars (local dev)
             conn = psycopg2.connect(
-                host=os.getenv('PG_HOST', 'localhost'),
-                port=os.getenv('PG_PORT', '5432'),
-                database=os.getenv('PG_DATABASE', 'farmdb'),
-                user=os.getenv('PG_USER', 'postgres'),
-                password=os.getenv('PG_PASSWORD', '')
+                host=os.getenv("PGHOST"),
+                port=os.getenv("PGPORT"),
+                database=os.getenv("PGDATABASE"),
+                user=os.getenv("PGUSER"),
+                password=os.getenv("PGPASSWORD"),
+                sslmode="require"
             )
         
         conn.autocommit = False
