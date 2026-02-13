@@ -49,7 +49,7 @@ except Exception as e:
     print(f"  Farmer services not available: {e}")
 
 # Load environment variables
-load_dotenv()
+#load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -59,6 +59,7 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, 'frontend', 'static')
 )
 
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 # ========== SMTP Configuration ==========
 SMTP_EMAIL = os.getenv('SMTP_EMAIL', '')       # Your Gmail address
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '') # Gmail App Password (NOT your regular password)
@@ -98,10 +99,14 @@ def get_connection():
                 user=os.getenv('PG_USER', 'postgres'),
                 password=os.getenv('PG_PASSWORD', '')
             )
+        conn.autocommit = False
         return conn
+
     except Exception as e:
-        print(f" Database connection failed: {e}")
+        print("❌ Database connection failed:", e)
         return None
+
+
 
 def execute_query(query, params=None, fetch=False):
     """Execute SQL query with optional parameters (uses %s placeholders)"""
@@ -280,10 +285,13 @@ def get_user_sessions(user_email):
         
         return sessions
     except Exception as e:
-        print(f"Error getting user sessions: {e}")
+        print("❌ SQL ERROR FULL DETAILS:")
         import traceback
         traceback.print_exc()
-        return []
+        if conn:
+            conn.rollback()
+            conn.close()
+        raise e 
 
 # ----------------------
 # Gemini AI Setup
@@ -3430,5 +3438,6 @@ def get_voice_commands():
 
 
 if __name__ == '__main__':
-    # Run without the Werkzeug reloader to avoid Anaconda/google-api-core conflict on Windows
-    app.run(debug=True, host='127.0.0.1', port=5000, use_reloader=False)
+    # PORT env var set by Render/Railway; fallback to 5000 for local dev
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port, use_reloader=False)
