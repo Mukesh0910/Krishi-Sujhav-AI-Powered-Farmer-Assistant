@@ -85,16 +85,11 @@ def get_connection():
     """Get PostgreSQL connection using DATABASE_URL or individual env vars"""
     try:
         database_url = os.getenv('DATABASE_URL', '')
-        print(f"  DATABASE_URL set: {'YES' if database_url else 'NO (falling back to localhost)'}")
         if database_url:
             # Render injects DATABASE_URL; fix postgres:// → postgresql://
             if database_url.startswith('postgres://'):
                 database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            # Try with sslmode=require first, fallback to without SSL (for internal URLs)
-            try:
-                conn = psycopg2.connect(database_url, sslmode='require')
-            except Exception:
-                conn = psycopg2.connect(database_url, sslmode='prefer')
+            conn = psycopg2.connect(database_url, sslmode='require')
         else:
             # Local development — individual env vars
             conn = psycopg2.connect(
