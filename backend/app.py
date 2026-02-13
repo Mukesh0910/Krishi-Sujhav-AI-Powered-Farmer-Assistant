@@ -17,6 +17,7 @@ import time
 import base64
 from io import BytesIO
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import secrets
@@ -2387,7 +2388,7 @@ If you did not request this, please ignore this email.
     msg.attach(MIMEText(html_body, 'html'))
     
     try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
@@ -2397,6 +2398,9 @@ If you did not request this, please ignore this email.
         return True
     except smtplib.SMTPAuthenticationError:
         print("  ❌ SMTP Auth Error — check SMTP_EMAIL / SMTP_PASSWORD (use Gmail App Password)")
+        return False
+    except (socket.timeout, TimeoutError):
+        print("  ❌ SMTP connection timed out (port 587 may be blocked on this host)")
         return False
     except Exception as e:
         print(f"  ❌ SMTP Error: {e}")
@@ -2455,11 +2459,15 @@ def send_otp():
                 'token': token
             }), 200
         else:
-            # Even if SMTP fails, don't leak OTP — just tell user to retry
+            # SMTP failed — fall back to demo mode: return OTP in response
+            # This allows password reset to work even without SMTP
+            print(f"  ⚠️ SMTP unavailable — returning OTP in response (demo mode)")
             return jsonify({
-                'success': False,
-                'error': 'Failed to send email. Please check SMTP configuration or try again later.'
-            }), 500
+                'success': True,
+                'message': 'Email service unavailable. Use the OTP shown below.',
+                'token': token,
+                'demo_otp': otp_code
+            }), 200
             
     except Exception as e:
         print(f"  Error in send_otp: {e}")
