@@ -85,6 +85,7 @@ def get_connection():
     """Get PostgreSQL connection using DATABASE_URL or individual env vars"""
     try:
         database_url = os.getenv('DATABASE_URL', '')
+        print(f"  DATABASE_URL set: {'YES' if database_url else 'NO (falling back to localhost)'}")
         if database_url:
             # Render injects DATABASE_URL; fix postgres:// → postgresql://
             if database_url.startswith('postgres://'):
