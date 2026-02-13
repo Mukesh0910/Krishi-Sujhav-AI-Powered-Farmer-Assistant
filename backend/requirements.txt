@@ -10,12 +10,11 @@ requests==2.31.0
 
 # AI & ML
 google-generativeai==0.3.2
-tensorflow>=2.12.0
 numpy>=1.24.0
 Pillow>=9.0.0
 
-# Database
-pyodbc>=4.0.0
+# Database — PostgreSQL (Render / Railway / local)
+psycopg2-binary>=2.9.0
 
 # Production Server
 gunicorn==21.2.0

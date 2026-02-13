@@ -75,34 +75,36 @@ CORS(app)
 bcrypt = Bcrypt(app)
 
 # ----------------------
-# SQL Server Setup (Direct pyodbc)
+# PostgreSQL Setup (psycopg2) — works on Render, Railway, local
 # ----------------------
-import pyodbc
+import psycopg2
+import psycopg2.extras
 
 def get_connection():
-    """Get direct SQL Server connection"""
+    """Get PostgreSQL connection using DATABASE_URL or individual env vars"""
     try:
-        # Build connection string
-        server = os.getenv('SQL_SERVER', 'LAPTOP-MUKESH\\SQLEXPRESS')
-        database = os.getenv('SQL_DATABASE', 'farmDB')
-        trusted = os.getenv('TRUSTED_CONNECTION', 'YES')
-        driver = os.getenv('SQL_DRIVER', 'ODBC Driver 17 for SQL Server')
-        
-        if trusted.upper() == 'YES':
-            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection=yes;TrustServerCertificate=yes"
+        database_url = os.getenv('DATABASE_URL', '')
+        if database_url:
+            # Render injects DATABASE_URL; fix postgres:// → postgresql://
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            conn = psycopg2.connect(database_url, sslmode='require')
         else:
-            username = os.getenv('SQL_USERNAME', '')
-            password = os.getenv('SQL_PASSWORD', '')
-            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};TrustServerCertificate=yes"
-        
-        conn = pyodbc.connect(conn_str)
+            # Local development — individual env vars
+            conn = psycopg2.connect(
+                host=os.getenv('PG_HOST', 'localhost'),
+                port=os.getenv('PG_PORT', '5432'),
+                database=os.getenv('PG_DATABASE', 'farmdb'),
+                user=os.getenv('PG_USER', 'postgres'),
+                password=os.getenv('PG_PASSWORD', '')
+            )
         return conn
     except Exception as e:
         print(f" Database connection failed: {e}")
         return None
 
 def execute_query(query, params=None, fetch=False):
-    """Execute SQL query with optional parameters"""
+    """Execute SQL query with optional parameters (uses %s placeholders)"""
     conn = get_connection()
     if not conn:
         return None
@@ -128,20 +130,61 @@ def execute_query(query, params=None, fetch=False):
         import traceback
         traceback.print_exc()
         if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
             conn.close()
         return None
 
-# Test database connection on startup
+def init_database():
+    """Create tables if they don't exist (auto-migration on startup)"""
+    create_users = """
+    CREATE TABLE IF NOT EXISTS Users (
+        UserID SERIAL PRIMARY KEY,
+        FullName VARCHAR(200),
+        Email VARCHAR(200) UNIQUE NOT NULL,
+        PasswordHash VARCHAR(500) NOT NULL,
+        PreferredLanguage VARCHAR(10) DEFAULT 'en',
+        Location VARCHAR(200),
+        Role VARCHAR(50) DEFAULT 'Farmer',
+        CreatedAt TIMESTAMP DEFAULT NOW(),
+        LastLogin TIMESTAMP
+    );
+    """
+    create_chats = """
+    CREATE TABLE IF NOT EXISTS Chats (
+        ID SERIAL PRIMARY KEY,
+        UserID INTEGER REFERENCES Users(UserID) ON DELETE CASCADE,
+        UserMessage TEXT,
+        AIResponse TEXT,
+        Language VARCHAR(10) DEFAULT 'en',
+        HasImages INTEGER DEFAULT 0,
+        DetectedDiseases TEXT,
+        Timestamp TIMESTAMP DEFAULT NOW(),
+        SessionID VARCHAR(100)
+    );
+    """
+    execute_query(create_users)
+    execute_query(create_chats)
+    print("   Database tables verified/created")
+
+# Test database connection and init tables on startup
 try:
     test_conn = get_connection()
     if test_conn:
         test_conn.close()
-        print(" Connected to SQL Server successfully!")
-        print(f"   Server: {os.getenv('SQL_SERVER', 'Not configured')}")
-        print(f"   Database: {os.getenv('SQL_DATABASE', 'Not configured')}")
-        print("   Using direct pyodbc connection")
+        print(" Connected to PostgreSQL successfully!")
+        db_url = os.getenv('DATABASE_URL', '')
+        if db_url:
+            # Mask password in URL for logging
+            print(f"   Using DATABASE_URL (Render)")
+        else:
+            print(f"   Host: {os.getenv('PG_HOST', 'localhost')}")
+            print(f"   Database: {os.getenv('PG_DATABASE', 'farmdb')}")
+        init_database()
     else:
-        print(" Failed to connect to SQL Server")
+        print(" Failed to connect to PostgreSQL")
 except Exception as e:
     print(f" Database connection test failed: {e}")
 
@@ -168,9 +211,9 @@ def calculate_session_size(session_id):
     """Calculate total size of messages in a session (in MB)"""
     try:
         query = """
-            SELECT SUM(DATALENGTH(UserMessage) + DATALENGTH(AIResponse)) / 1024.0 / 1024.0 as SizeMB
+            SELECT SUM(LENGTH(UserMessage) + LENGTH(AIResponse)) / 1024.0 / 1024.0 as SizeMB
             FROM Chats 
-            WHERE SessionID = ?
+            WHERE SessionID = %s
         """
         result = execute_query(query, [session_id], fetch=True)
         if result and result[0][0]:
@@ -190,7 +233,7 @@ def get_user_sessions(user_email):
     """Get all chat sessions for a user with metadata"""
     try:
         # Get user ID
-        user_query = "SELECT UserID FROM Users WHERE Email = ?"
+        user_query = "SELECT UserID FROM Users WHERE Email = %s"
         user_result = execute_query(user_query, [user_email], fetch=True)
         
         if not user_result:
@@ -204,9 +247,9 @@ def get_user_sessions(user_email):
                 SessionID,
                 MIN(Timestamp) as FirstMessageTime,
                 COUNT(*) as MessageCount,
-                (SELECT TOP 1 UserMessage FROM Chats WHERE SessionID = c.SessionID ORDER BY Timestamp ASC) as FirstMessage
+                (SELECT UserMessage FROM Chats WHERE SessionID = c.SessionID ORDER BY Timestamp ASC LIMIT 1) as FirstMessage
             FROM Chats c
-            WHERE UserID = ? AND SessionID IS NOT NULL
+            WHERE UserID = %s AND SessionID IS NOT NULL
             GROUP BY SessionID
             ORDER BY MIN(Timestamp) DESC
         """
@@ -380,7 +423,7 @@ def convert_language_code(language):
 def get_user_language():
     if 'user_email' in session:
         try:
-            query = "SELECT PreferredLanguage FROM Users WHERE Email = ?"
+            query = "SELECT PreferredLanguage FROM Users WHERE Email = %s"
             result = execute_query(query, [session['user_email']], fetch=True)
             if result and result[0][0]:
                 return convert_language_code(result[0][0])
@@ -1539,7 +1582,7 @@ Keep it brief but actionable. Write ONLY in {lang_name}."""
     # Save chat history to database
     try:
         # Get UserID from email
-        user_query_sql = "SELECT UserID FROM Users WHERE Email = ?"
+        user_query_sql = "SELECT UserID FROM Users WHERE Email = %s"
         user_result = execute_query(user_query_sql, [user_email], fetch=True)
         
         if user_result:
@@ -1551,7 +1594,7 @@ Keep it brief but actionable. Write ONLY in {lang_name}."""
             # Insert chat record
             chat_insert_query = """
                 INSERT INTO Chats (UserID, UserMessage, AIResponse, Language, HasImages, DetectedDiseases, Timestamp, SessionID)
-                VALUES (?, ?, ?, ?, ?, ?, GETDATE(), ?)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s)
             """
             chat_params = (
                 user_id,
@@ -1587,11 +1630,12 @@ def get_chat_history():
     try:
         # Get chat history with SQL query
         query = """
-            SELECT TOP 50 c.ID, c.UserMessage, c.AIResponse, c.Language, c.Timestamp
+            SELECT c.ID, c.UserMessage, c.AIResponse, c.Language, c.Timestamp
             FROM Chats c
             INNER JOIN Users u ON c.UserID = u.UserID
-            WHERE u.Email = ?
+            WHERE u.Email = %s
             ORDER BY c.Timestamp DESC
+            LIMIT 50
         """
         rows = execute_query(query, [user_email], fetch=True)
         
@@ -1626,7 +1670,7 @@ def clear_chat_history():
         # Delete chat history for this user
         delete_query = """
             DELETE FROM Chats
-            WHERE UserID = (SELECT UserID FROM Users WHERE Email = ?)
+            WHERE UserID = (SELECT UserID FROM Users WHERE Email = %s)
         """
         result = execute_query(delete_query, [user_email])
         
@@ -1832,7 +1876,7 @@ def get_session_messages(session_id):
     
     try:
         # Get user ID
-        user_query = "SELECT UserID FROM Users WHERE Email = ?"
+        user_query = "SELECT UserID FROM Users WHERE Email = %s"
         user_result = execute_query(user_query, [user_email], fetch=True)
         
         if not user_result:
@@ -1844,7 +1888,7 @@ def get_session_messages(session_id):
         messages_query = """
             SELECT ID, UserMessage, AIResponse, Timestamp, HasImages, DetectedDiseases
             FROM Chats
-            WHERE UserID = ? AND SessionID = ?
+            WHERE UserID = %s AND SessionID = %s
             ORDER BY Timestamp ASC
         """
         messages_result = execute_query(messages_query, [user_id, session_id], fetch=True)
@@ -1883,7 +1927,7 @@ def home():
     user = None
     if 'user_email' in session:
         try:
-            query = "SELECT UserID, FullName, Email, PreferredLanguage FROM Users WHERE Email = ?"
+            query = "SELECT UserID, FullName, Email, PreferredLanguage FROM Users WHERE Email = %s"
             result = execute_query(query, [session['user_email']], fetch=True)
             if result:
                 user = {
@@ -1906,7 +1950,7 @@ def weather_page():
     user = None
     if 'user_email' in session:
         try:
-            query = "SELECT UserID, FullName, Email, PreferredLanguage FROM Users WHERE Email = ?"
+            query = "SELECT UserID, FullName, Email, PreferredLanguage FROM Users WHERE Email = %s"
             result = execute_query(query, [session['user_email']], fetch=True)
             if result:
                 user = {
@@ -1927,7 +1971,7 @@ def dashboard_page():
     user = None
     if 'user_email' in session:
         try:
-            query = "SELECT UserID, FullName, Email, PreferredLanguage FROM Users WHERE Email = ?"
+            query = "SELECT UserID, FullName, Email, PreferredLanguage FROM Users WHERE Email = %s"
             result = execute_query(query, [session['user_email']], fetch=True)
             if result:
                 user = {
@@ -2142,7 +2186,8 @@ def document_test():
     """Test page for document extraction feature"""
     if 'user_email' not in session:
         return redirect(url_for('login'))
-    return render_template('document_test.html')
+    # Redirect to dashboard since document_test.html template doesn't exist
+    return redirect(url_for('dashboard_page'))
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -2173,7 +2218,7 @@ def signup():
             return redirect(url_for('signup'))
 
         # Check if email already exists
-        check_query = "SELECT UserID FROM Users WHERE Email = ?"
+        check_query = "SELECT UserID FROM Users WHERE Email = %s"
         existing = execute_query(check_query, [email], fetch=True)
         
         if existing:
@@ -2188,7 +2233,7 @@ def signup():
         # Insert new user
         insert_query = """
             INSERT INTO Users (FullName, Email, PasswordHash, PreferredLanguage, Location, Role, CreatedAt)
-            VALUES (?, ?, ?, ?, ?, 'Farmer', GETDATE())
+            VALUES (%s, %s, %s, %s, %s, 'Farmer', NOW())
         """
         params = (full_name, email, hashed_password, language_preference, location)
         
@@ -2223,7 +2268,7 @@ def login():
         print(f"   Password length: {len(password)}")
 
         # Fetch user from database
-        query = "SELECT UserID, FullName, Email, PasswordHash, PreferredLanguage FROM Users WHERE Email = ?"
+        query = "SELECT UserID, FullName, Email, PasswordHash, PreferredLanguage FROM Users WHERE Email = %s"
         results = execute_query(query, [email], fetch=True)
         
         if not results:
@@ -2251,7 +2296,7 @@ def login():
             
             # Update last login timestamp
             try:
-                update_login = "UPDATE Users SET LastLogin = GETDATE() WHERE Email = ?"
+                update_login = "UPDATE Users SET LastLogin = NOW() WHERE Email = %s"
                 execute_query(update_login, [email])
             except Exception as e:
                 print(f"Could not update LastLogin: {e}")
@@ -2362,7 +2407,7 @@ def send_otp():
         
         # Check if user exists
         user_result = execute_query(
-            "SELECT UserID, FullName FROM Users WHERE Email = ?", [email], fetch=True
+            "SELECT UserID, FullName FROM Users WHERE Email = %s", [email], fetch=True
         )
         if not user_result:
             return jsonify({'success': False, 'error': 'No account found with this email'}), 404
@@ -2493,7 +2538,7 @@ def reset_password():
         hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
         
         # Update password in database
-        update_query = "UPDATE Users SET PasswordHash = ? WHERE Email = ?"
+        update_query = "UPDATE Users SET PasswordHash = %s WHERE Email = %s"
         result = execute_query(update_query, [hashed_password, email])
         
         # Clean up OTP store
@@ -2520,7 +2565,7 @@ def change_language(language):
     
     if 'user_email' in session:
         try:
-            update_query = "UPDATE Users SET PreferredLanguage = ? WHERE Email = ?"
+            update_query = "UPDATE Users SET PreferredLanguage = %s WHERE Email = %s"
             execute_query(update_query, [lang_code, session['user_email']])
             print(f" Updated user language preference to: {lang_code}")
         except Exception as e:
@@ -2981,10 +3026,6 @@ Respond in {lang_name} ONLY."""
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Failed to analyze document: {str(e)}'}), 500
-        return jsonify({
-            'error': 'Failed to generate response',
-            'details': str(e)
-        }), 500
 
 
 @app.route('/api/document/delete', methods=['POST'])
@@ -3100,16 +3141,17 @@ def voice_chat_stream():
         
         def generate_stream():
             try:
-                # Get FarmingAI instance
-                farming_ai = app.farming_ai
-                
-                # Generate response
+                # Generate response using module-level farming_ai instance
                 response = farming_ai.get_farming_response(message, language)
                 
-                # Save to chat history
+                # Save to chat history via database
                 if user_id:
-                    farming_ai._save_chat_message(user_id, message, 'user')
-                    farming_ai._save_chat_message(user_id, response, 'assistant')
+                    try:
+                        chat_insert = """INSERT INTO Chats (UserID, UserMessage, AIResponse, Language, Timestamp, SessionID)
+                                         VALUES (%s, %s, %s, %s, NOW(), %s)"""
+                        execute_query(chat_insert, [user_id, message, response, language, str(uuid.uuid4())])
+                    except Exception as save_err:
+                        print(f"Error saving voice chat: {save_err}")
                 
                 # Stream response word by word
                 words = response.split()
@@ -3275,14 +3317,15 @@ def voice_analyze_image():
         else:
             return jsonify({'error': 'No image provided'}), 400
         
-        # Get ML prediction
-        predictions = app.farming_ai.get_ml_model().predict_image(temp_path, top_k=3)
+        # Get ML prediction using module-level get_ml_model function
+        ml = get_ml_model()
+        predictions = ml.predict_image(temp_path, top_k=3)
         
         if predictions:
             # Format results for voice
             disease_name = predictions[0][0]
             confidence = predictions[0][1] * 100
-            plant_type = app.farming_ai.get_ml_model().get_plant_type(disease_name)
+            plant_type = ml.get_plant_type(disease_name)
             
             # Create voice-friendly response based on language
             if language == 'hi':
@@ -3301,9 +3344,24 @@ def voice_analyze_image():
                 else:
                     voice_text = f"I detected {disease_name} with {confidence:.1f}% confidence. This appears to be a reliable diagnosis."
             
-            # Get farming advice
+            # Get farming advice using module-level farming_ai
             advice_query = f"Give treatment advice for {disease_name} in {plant_type} plants"
-            advice = app.farming_ai.get_farming_response(advice_query, language)
+            advice = farming_ai.get_farming_response(advice_query, language)
+            
+            # Format disease name: replace underscores/dashes with spaces, title case
+            formatted_name = disease_name.replace('_', ' ').replace('__', ' - ').title()
+            
+            # Get plant emoji based on disease name
+            plant_emojis = {
+                'tomato': '🍅', 'potato': '🥔', 'pepper': '🌶️', 'corn': '🌽',
+                'apple': '🍎', 'grape': '🍇', 'strawberry': '🍓', 'cherry': '🍒',
+                'peach': '🍑', 'orange': '🍊', 'rice': '🌾', 'wheat': '🌾'
+            }
+            plant_emoji = '🌱'  # default
+            for key, emoji in plant_emojis.items():
+                if key in disease_name.lower():
+                    plant_emoji = emoji
+                    break
             
             response_data = {
                 'success': True,
@@ -3314,8 +3372,8 @@ def voice_analyze_image():
                 'advice': advice,
                 'all_predictions': [(pred[0], pred[1] * 100) for pred in predictions],
                 'language': language,
-                'formatted_name': app.farming_ai._format_disease_name(disease_name),
-                'plant_emoji': app.farming_ai._get_plant_emoji(disease_name)
+                'formatted_name': formatted_name,
+                'plant_emoji': plant_emoji
             }
         else:
             if language == 'hi':

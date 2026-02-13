@@ -157,7 +157,8 @@ krishi_1/
 │       └── translations.json           # 8-language translation file
 │
 ├── README.md
-├── Procfile                            # Heroku deployment
+├── render.yaml                         # Render deployment config
+├── Procfile                            # Gunicorn start command
 └── .gitignore
 ```
 
@@ -167,7 +168,7 @@ krishi_1/
 
 ### Prerequisites
 - Python 3.8+
-- SQL Server (or SQL Server Express with SSMS)
+- PostgreSQL (local) or Render account (cloud)
 - pip (Python package manager)
 - Gmail account (for SMTP OTP)
 
@@ -190,10 +191,9 @@ pip install -r requirements.txt
 
 ### 2. Database Setup
 ```sql
--- In SQL Server Management Studio:
-CREATE DATABASE farmDB;
-GO
--- The Users table is created automatically on first run.
+-- In pgAdmin or psql:
+CREATE DATABASE farmdb;
+-- Tables are auto-created on first run.
 ```
 
 ### 3. Environment Variables
@@ -209,11 +209,8 @@ GEMINI_API_KEY=your-gemini-api-key          # https://makersuite.google.com/app/
 # OpenWeather
 OPENWEATHER_API_KEY=your-openweather-key    # https://openweathermap.org/api
 
-# SQL Server
-SQL_SERVER=your-server-name
-SQL_DATABASE=farmDB
-SQL_DRIVER=ODBC Driver 17 for SQL Server
-TRUSTED_CONNECTION=YES
+# PostgreSQL (local dev — Render auto-injects DATABASE_URL)
+DATABASE_URL=postgresql://postgres:password@localhost:5432/farmdb
 
 # SMTP (Gmail — for Forgot Password OTP)
 SMTP_EMAIL=your-email@gmail.com
@@ -337,14 +334,14 @@ Open **http://127.0.0.1:5000** in your browser.
 |---|---|
 | **Backend** | Flask 2.3, Python 3.8+ |
 | **AI/ML** | TensorFlow 2.12, Google Gemini 2.0 Flash |
-| **Database** | SQL Server (via PyODBC) |
+| **Database** | PostgreSQL (via psycopg2) |
 | **Auth** | Flask-BCrypt, SMTP OTP (Gmail) |
 | **Weather** | OpenWeather API |
 | **Market Data** | data.gov.in API |
 | **Frontend** | Vanilla JS, Tailwind CSS, HTML5 |
 | **Voice** | Web Speech API (STT + TTS) |
 | **Email** | Python smtplib + Gmail SMTP |
-| **Deployment** | Gunicorn, Heroku-ready (Procfile) |
+| **Deployment** | Gunicorn, Render-ready (render.yaml) |
 
 ---
 
@@ -364,7 +361,7 @@ Open **http://127.0.0.1:5000** in your browser.
 - [x] Full Dashboard Localization
 - [x] Voice Interaction System
 - [ ] Add more crop types for disease detection
-- [ ] PostgreSQL / MySQL support
+- [x] PostgreSQL support for cloud deployment
 - [ ] Mobile app (React Native)
 - [ ] Offline mode with cached data
 - [ ] Community forum for farmers

@@ -54,9 +54,10 @@ app_old_backup.py
 temp/
 tmp/
 
-# Model files (optional - uncomment if models are large)
+# Model files (large — use Git LFS for .h5 files)
 # models/*.h5
 # models/*.pkl
+*.pkl
 
 # Cache
 .cache/
