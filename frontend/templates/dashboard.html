@@ -31,30 +31,33 @@
     .msp-below { color: #dc2626; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    @media (max-width: 639px) {
+      .tab-content-panel { padding: 1rem !important; }
+    }
   </style>
 </head>
 <body class="min-h-screen bg-gray-50 text-slate-900">
 
   <!-- Top Navigation -->
   <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <a href="/" class="flex items-center gap-2 text-accent hover:text-accent/80 transition-colors">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2 sm:gap-4 min-w-0">
+        <a href="/" class="flex items-center gap-1 sm:gap-2 text-accent hover:text-accent/80 transition-colors flex-shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-          <span class="text-sm font-medium">Back to Chat</span>
+          <span class="text-sm font-medium hidden sm:inline">Back to Chat</span>
         </a>
-        <div class="h-6 w-px bg-slate-200"></div>
-        <div class="flex items-center gap-2">
-          <div class="h-9 w-9 bg-accent rounded-lg flex items-center justify-center">
+        <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="h-8 w-8 sm:h-9 sm:w-9 bg-accent rounded-lg flex items-center justify-center flex-shrink-0">
             <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
           </div>
-          <div>
-            <h1 class="text-lg font-bold text-slate-900">Farmer Dashboard</h1>
-            <p class="text-xs text-slate-500">Everything a farmer needs — in one place</p>
+          <div class="min-w-0">
+            <h1 class="text-base sm:text-lg font-bold text-slate-900 truncate">Farmer Dashboard</h1>
+            <p class="text-xs text-slate-500 hidden sm:block">Everything a farmer needs — in one place</p>
           </div>
         </div>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         <select id="dashLang" onchange="changeDashLanguage(this.value)" class="text-sm border border-slate-300 rounded-lg px-3 py-1.5 bg-white">
           <option value="en">English</option>
           <option value="hi">हिन्दी</option>
@@ -142,7 +145,7 @@
       </div>
 
       <!-- TAB: Mandi Prices -->
-      <div id="content-mandi" class="p-6">
+      <div id="content-mandi" class="p-6 tab-content-panel">
         <div class="flex flex-col md:flex-row gap-4 mb-6">
           <div class="flex-1">
             <label class="block text-sm font-medium text-slate-700 mb-1">Select Commodity</label>
@@ -185,7 +188,7 @@
       </div>
 
       <!-- TAB: Government Schemes -->
-      <div id="content-schemes" class="p-6 hidden">
+      <div id="content-schemes" class="p-6 hidden tab-content-panel">
         <div class="mb-6">
           <h3 class="text-lg font-bold text-slate-900 mb-1">🏛️ Government Schemes for Farmers</h3>
           <p class="text-sm text-slate-500">Find schemes you're eligible for. Click to view details and apply.</p>
@@ -196,7 +199,7 @@
       </div>
 
       <!-- TAB: Crop Calendar -->
-      <div id="content-calendar" class="p-6 hidden">
+      <div id="content-calendar" class="p-6 hidden tab-content-panel">
         <div class="mb-6">
           <h3 class="text-lg font-bold text-slate-900 mb-1">📅 Monthly Farming Calendar</h3>
           <p class="text-sm text-slate-500">Month-by-month tasks for your farming season</p>
@@ -221,7 +224,7 @@
       </div>
 
       <!-- TAB: Soil Health -->
-      <div id="content-soil" class="p-6 hidden">
+      <div id="content-soil" class="p-6 hidden tab-content-panel">
         <div class="mb-6">
           <h3 class="text-lg font-bold text-slate-900 mb-1">🧪 Soil Health & Fertilizer Guide</h3>
           <p class="text-sm text-slate-500">Get NPK recommendations and soil health advice</p>
@@ -247,7 +250,7 @@
       </div>
 
       <!-- TAB: Farm Economics -->
-      <div id="content-economics" class="p-6 hidden">
+      <div id="content-economics" class="p-6 hidden tab-content-panel">
         <div class="mb-6">
           <h3 class="text-lg font-bold text-slate-900 mb-1">📊 Farm Profit Calculator</h3>
           <p class="text-sm text-slate-500">Calculate your expected profit, ROI, and compare crops</p>
@@ -282,7 +285,7 @@
       </div>
 
       <!-- TAB: Alerts -->
-      <div id="content-alerts" class="p-6 hidden">
+      <div id="content-alerts" class="p-6 hidden tab-content-panel">
         <div class="mb-6">
           <h3 class="text-lg font-bold text-slate-900 mb-1">🚨 Agricultural Alerts & Warnings</h3>
           <p class="text-sm text-slate-500">Pest outbreaks, weather warnings, scheme deadlines</p>
@@ -462,8 +465,8 @@
           
           // Price Table
           if (data.prices && data.prices.length > 0) {
-            html += `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <table class="w-full text-sm">
+            html += `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden overflow-x-auto">
+              <table class="w-full text-sm min-w-[500px]">
                 <thead class="bg-slate-50">
                   <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">State</th>
@@ -731,7 +734,7 @@
         const data = await resp.json();
         
         if (data.success && data.comparisons) {
-          let html = '<div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="px-4 py-2 text-left">Crop</th><th class="px-4 py-2 text-right">Cost</th><th class="px-4 py-2 text-right">Revenue</th><th class="px-4 py-2 text-right">Profit</th><th class="px-4 py-2 text-right">ROI</th></tr></thead><tbody>';
+          let html = '<div class="bg-white rounded-xl border border-slate-200 overflow-hidden overflow-x-auto"><table class="w-full text-sm min-w-[500px]"><thead class="bg-slate-50"><tr><th class="px-4 py-2 text-left">Crop</th><th class="px-4 py-2 text-right">Cost</th><th class="px-4 py-2 text-right">Revenue</th><th class="px-4 py-2 text-right">Profit</th><th class="px-4 py-2 text-right">ROI</th></tr></thead><tbody>';
           data.comparisons.forEach((c, i) => {
             const cls = i === 0 ? 'bg-green-50 font-bold' : (i % 2 === 0 ? '' : 'bg-slate-50');
             html += `<tr class="${cls}">

@@ -26,12 +26,17 @@
         .fade-in {
             animation: fadeIn 0.5s ease-out;
         }
+        @media (max-width: 767px) {
+            .weather-sidebar { display: none !important; }
+            .weather-search-row { flex-direction: column; }
+            .weather-search-row button { width: 100%; }
+        }
     </style>
 </head>
 <body>
     <div class="flex h-screen bg-slate-50">
         <!-- Sidebar with User Profile -->
-        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
+        <aside class="weather-sidebar w-64 bg-white border-r border-slate-200 flex flex-col">
             <!-- Sidebar Header -->
             <div class="p-4 border-b border-slate-200">
                 <h2 class="font-semibold text-slate-900">Weather</h2>
@@ -78,35 +83,38 @@
             </header>
 
             <!-- Content Area -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <div class="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6">
                 <!-- Location Search Card -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 fade-in">
                     <h2 class="text-lg font-semibold text-slate-900 mb-4">Search Location</h2>
-                    <div class="flex gap-3">
+                    <div class="flex flex-col sm:flex-row gap-3 weather-search-row">
                         <input 
                             type="text" 
                             id="locationInput" 
-                            placeholder="Enter city name (e.g., Delhi, Mumbai, Punjab, Chandigarh)"
+                            placeholder="Enter city name (e.g., Delhi, Mumbai)"
                             class="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             onkeypress="if(event.key==='Enter') updateWeather()">
-                        <button onclick="updateWeather()" class="px-6 py-3 accent text-white rounded-lg hover:opacity-90 transition-all font-medium">
-                            Search
-                        </button>
-                        <button onclick="useCurrentLocation()" class="px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all font-medium flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-                                <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
-                            </svg>
-                            My Location
-                        </button>
+                        <div class="flex gap-2 sm:gap-3">
+                            <button onclick="updateWeather()" class="flex-1 sm:flex-none px-6 py-3 accent text-white rounded-lg hover:opacity-90 transition-all font-medium">
+                                Search
+                            </button>
+                            <button onclick="useCurrentLocation()" class="flex-1 sm:flex-none px-4 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all font-medium flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                                    <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+                                </svg>
+                                <span class="hidden sm:inline">My Location</span>
+                                <span class="sm:hidden">GPS</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Current Weather Card -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 fade-in">
-                    <div class="flex items-center justify-between mb-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-8 fade-in">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3">
                         <div>
-                            <h2 id="cityName" class="text-3xl font-bold text-slate-900 mb-1">Loading...</h2>
+                            <h2 id="cityName" class="text-xl md:text-3xl font-bold text-slate-900 mb-1">Loading...</h2>
                             <p id="weatherCondition" class="text-slate-600 capitalize">--</p>
                         </div>
                         <div id="weatherIcon" class="text-6xl">🌤️</div>
@@ -152,8 +160,8 @@
                 </div>
 
                 <!-- 48-Hour Forecast Card -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 fade-in">
-                    <h2 class="text-lg font-semibold text-slate-900 mb-6">48-Hour Forecast</h2>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 fade-in">
+                    <h2 class="text-lg font-semibold text-slate-900 mb-4 md:mb-6">48-Hour Forecast</h2>
                     
                     <div class="grid md:grid-cols-2 gap-4 mb-6">
                         <!-- Rain Prediction -->

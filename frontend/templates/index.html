@@ -196,20 +196,73 @@
     .farmer-bg {
       background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 40%, #fffbeb 100%);
     }
+
+    /* ========== RESPONSIVE / MOBILE ========== */
+    @media (max-width: 767px) {
+      /* Sidebar: hidden by default on mobile, overlay when opened */
+      #chatHistorySidebar {
+        position: fixed !important;
+        left: 0; top: 0; bottom: 0;
+        z-index: 50;
+        width: 280px !important;
+        min-width: 0 !important;
+        max-width: 85vw !important;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 25px rgba(0,0,0,0.15);
+      }
+      #chatHistorySidebar.mobile-open {
+        transform: translateX(0);
+      }
+      /* Backdrop when sidebar is open on mobile */
+      .mobile-sidebar-backdrop {
+        display: none;
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 45;
+      }
+      .mobile-sidebar-backdrop.active { display: block; }
+      /* Show open button on mobile */
+      #openSidebarBtn { display: flex !important; }
+      /* Hide resize handle on mobile */
+      .sidebar-resize-handle { display: none !important; }
+      /* Header adjustments */
+      .mobile-hide { display: none !important; }
+      /* Weather circle smaller on mobile */
+      #weatherCircle { width: 40px !important; height: 40px !important; font-size: 11px !important; }
+      #weatherCircle .w-5 { width: 12px; height: 12px; }
+      /* Chat padding reduced */
+      #chatMessages { padding: 12px !important; }
+      /* Chat input: fewer icons, tighter gaps */
+      #chatForm { gap: 6px !important; }
+      #chatForm .flex.items-center.gap-2 { gap: 2px !important; }
+      /* Profile dropdown responsive */
+      #profileDropdown { width: calc(100vw - 2rem) !important; max-width: 320px; right: -8px; }
+      /* Weather tooltip responsive */
+      .group .w-64 { width: calc(100vw - 3rem) !important; max-width: 256px; left: auto !important; right: -60px; transform: none !important; }
+    }
+
+    @media (max-width: 380px) {
+      /* Extra small phones */
+      #cameraButton { display: none !important; }
+      #chatForm textarea { padding: 8px 12px !important; font-size: 14px; }
+    }
   </style>
 </head>
 <body class="h-screen bg-gradient-to-br from-emerald-50/30 via-slate-50 to-amber-50/20 text-slate-900 antialiased">
   <div class="flex h-screen">
 
     <!-- Open Sidebar Button (Floating, appears when sidebar is closed) -->
-    <button id="openSidebarBtn" class="fixed left-4 top-20 z-30 bg-gradient-to-r from-accent to-emerald-600 text-white p-3 rounded-full hover:shadow-2xl transition-all duration-300 shadow-xl hidden hover:scale-110">
+    <button id="openSidebarBtn" class="fixed left-4 top-20 z-30 bg-gradient-to-r from-accent to-emerald-600 text-white p-3 rounded-full hover:shadow-2xl transition-all duration-300 shadow-xl hidden hover:scale-110 md:hidden">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
       </svg>
     </button>
 
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="mobileSidebarBackdrop" class="mobile-sidebar-backdrop" onclick="closeSidebarMobile()"></div>
+
     <!-- Left Sidebar: Chat History (Collapsible) -->
-    <aside id="chatHistorySidebar" class="w-72 bg-gradient-to-b from-white to-slate-50/80 border-r border-slate-200/60 flex flex-col transition-all duration-300 relative" style="min-width:200px;max-width:500px;">
+    <aside id="chatHistorySidebar" class="w-72 bg-gradient-to-b from-white to-slate-50/80 border-r border-slate-200/60 flex flex-col transition-all duration-300 relative hidden md:flex" style="min-width:200px;max-width:500px;">
       <!-- Resize Handle -->
       <div id="sidebarResizeHandle" class="sidebar-resize-handle"></div>
       
@@ -279,21 +332,21 @@
     <!-- Right Chat Section -->
     <main class="flex-1 flex flex-col">
       <!-- Chat Header with Weather -->
-      <header class="border-b border-slate-200/60 p-4 bg-white/80 backdrop-blur-sm flex items-center justify-between">
+      <header class="border-b border-slate-200/60 p-3 md:p-4 bg-white/80 backdrop-blur-sm flex items-center justify-between">
         <!-- Left: Title and Live Weather -->
-        <div class="flex items-center gap-4">
-          <div class="h-10 w-10 bg-accent rounded-full flex items-center justify-center">
-            <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-2 md:gap-4 min-w-0">
+          <div class="h-8 w-8 md:h-10 md:w-10 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="h-4 w-4 md:h-5 md:w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
             </svg>
           </div>
-          <div>
-            <h1 class="font-semibold text-slate-900">{{ translations.chat_title if translations and translations.chat_title else 'Krishi Sujhav' }}</h1>
-            <p class="text-sm text-slate-500">{{ translations.chat_subtitle if translations and translations.chat_subtitle else 'AI-powered farming guidance' }}</p>
+          <div class="min-w-0">
+            <h1 class="font-semibold text-slate-900 text-sm md:text-base truncate">{{ translations.chat_title if translations and translations.chat_title else 'Krishi Sujhav' }}</h1>
+            <p class="text-xs md:text-sm text-slate-500 hidden sm:block">{{ translations.chat_subtitle if translations and translations.chat_subtitle else 'AI-powered farming guidance' }}</p>
           </div>
           
           <!-- Circular Weather Widget -->
-          <div class="relative group ml-6">
+          <div class="relative group ml-2 md:ml-6 flex-shrink-0">
             <!-- Weather Circle (Shows only temperature) - Click to open full weather page -->
             <div id="weatherCircle" onclick="openWeatherPage()" class="w-16 h-16 bg-gradient-to-br from-sky-400 to-blue-500 rounded-full flex flex-col items-center justify-center cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-110 relative overflow-hidden">
               <!-- Animated background -->
@@ -378,7 +431,7 @@
             </button>
             
             <!-- Profile Dropdown Menu -->
-            <div id="profileDropdown" class="profile-dropdown absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200/60 overflow-hidden z-50">
+            <div id="profileDropdown" class="profile-dropdown absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-200/60 overflow-hidden z-50">
               <!-- User Info Header -->
               <div class="px-5 py-4 bg-gradient-to-r from-accent/10 to-emerald-50 border-b border-slate-100">
                 <div class="flex items-center gap-3">
@@ -598,25 +651,44 @@
     });
 
     // Sidebar Toggle Functionality
+    function isMobile() { return window.innerWidth < 768; }
+
+    function closeSidebarMobile() {
+      const sidebar = document.getElementById('chatHistorySidebar');
+      const backdrop = document.getElementById('mobileSidebarBackdrop');
+      sidebar.classList.remove('mobile-open');
+      if (backdrop) backdrop.classList.remove('active');
+    }
+
     function initializeSidebarToggle() {
       const sidebar = document.getElementById('chatHistorySidebar');
       const closeSidebarBtn = document.getElementById('closeSidebarBtn');
       const openSidebarBtn = document.getElementById('openSidebarBtn');
+      const backdrop = document.getElementById('mobileSidebarBackdrop');
       let isOpen = true;
 
       closeSidebarBtn.addEventListener('click', function() {
-        isOpen = false;
-        const currentWidth = parseInt(getComputedStyle(sidebar).width, 10);
-        sidebar.style.marginLeft = `-${currentWidth}px`;
-        openSidebarBtn.classList.remove('hidden');
+        if (isMobile()) {
+          closeSidebarMobile();
+        } else {
+          isOpen = false;
+          const currentWidth = parseInt(getComputedStyle(sidebar).width, 10);
+          sidebar.style.marginLeft = `-${currentWidth}px`;
+          openSidebarBtn.classList.remove('hidden');
+        }
       });
 
       openSidebarBtn.addEventListener('click', function() {
-        isOpen = true;
-        sidebar.style.marginLeft = '0';
-        const savedWidth = localStorage.getItem('sidebarWidth');
-        if (savedWidth) sidebar.style.width = savedWidth + 'px';
-        openSidebarBtn.classList.add('hidden');
+        if (isMobile()) {
+          sidebar.classList.add('mobile-open');
+          if (backdrop) backdrop.classList.add('active');
+        } else {
+          isOpen = true;
+          sidebar.style.marginLeft = '0';
+          const savedWidth = localStorage.getItem('sidebarWidth');
+          if (savedWidth) sidebar.style.width = savedWidth + 'px';
+          openSidebarBtn.classList.add('hidden');
+        }
       });
     }
 
