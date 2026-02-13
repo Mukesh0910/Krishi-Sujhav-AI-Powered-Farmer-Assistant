@@ -311,10 +311,36 @@ if GEMINI_API_KEY and GEMINI_API_KEY != '' and genai is not None:
         gemini_model = None
 else:
     if GEMINI_API_KEY and GEMINI_API_KEY != '' and genai is None:
-        print(" Gemini API key provided but google.generativeai package is unavailable; using fallback responses.")
+        print(" Gemini API key provided but google.generativeai package is unavailable; using REST API fallback.")
     else:
         print(" Gemini API key not found or is placeholder. Using fallback responses.")
     gemini_model = None
+
+# ----------------------
+# Gemini Debug Endpoint
+# ----------------------
+@app.route('/api/debug-gemini')
+def debug_gemini():
+    """Quick diagnostic endpoint for Gemini API health."""
+    info = {
+        'gemini_api_key_set': bool(GEMINI_API_KEY and GEMINI_API_KEY != ''),
+        'gemini_api_key_preview': (GEMINI_API_KEY[:8] + '...') if GEMINI_API_KEY else None,
+        'native_client_available': gemini_model is not None,
+        'genai_package_available': genai is not None,
+        'render_env': os.getenv('RENDER', 'not set'),
+    }
+    # Quick REST test
+    if GEMINI_API_KEY and GEMINI_API_KEY != '':
+        try:
+            test_resp = call_gemini_rest('Say hello in one word.', 'en')
+            info['rest_api_test'] = 'OK'
+            info['rest_api_response'] = test_resp[:100] if test_resp else 'empty'
+        except Exception as e:
+            info['rest_api_test'] = 'FAILED'
+            info['rest_api_error'] = str(e)[:300]
+    else:
+        info['rest_api_test'] = 'SKIPPED - no API key'
+    return jsonify(info)
 
 # ----------------------
 # File Upload Configuration
