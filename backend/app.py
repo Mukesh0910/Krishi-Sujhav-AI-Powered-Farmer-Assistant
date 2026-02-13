@@ -90,7 +90,11 @@ def get_connection():
             # Render injects DATABASE_URL; fix postgres:// → postgresql://
             if database_url.startswith('postgres://'):
                 database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            conn = psycopg2.connect(database_url, sslmode='require')
+            # Try with sslmode=require first, fallback to without SSL (for internal URLs)
+            try:
+                conn = psycopg2.connect(database_url, sslmode='require')
+            except Exception:
+                conn = psycopg2.connect(database_url, sslmode='prefer')
         else:
             # Local development — individual env vars
             conn = psycopg2.connect(
