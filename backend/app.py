@@ -2449,8 +2449,13 @@ def send_otp():
             'sent_at': datetime.now()
         }
         
-        # Send email via SMTP
-        email_sent = _send_otp_email(email, otp_code, user_name)
+        # Send email via SMTP (skip on Render / when SMTP is known to be blocked)
+        is_render = os.getenv('RENDER', '') != ''
+        email_sent = False
+        if not is_render:
+            email_sent = _send_otp_email(email, otp_code, user_name)
+        else:
+            print(f"  ⏭️ Skipping SMTP on Render (port 587 blocked)")
         
         if email_sent:
             return jsonify({
@@ -2459,8 +2464,7 @@ def send_otp():
                 'token': token
             }), 200
         else:
-            # SMTP failed — fall back to demo mode: return OTP in response
-            # This allows password reset to work even without SMTP
+            # SMTP skipped or failed — demo mode: return OTP in response
             print(f"  ⚠️ SMTP unavailable — returning OTP in response (demo mode)")
             return jsonify({
                 'success': True,
